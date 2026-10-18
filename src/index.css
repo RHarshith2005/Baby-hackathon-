@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --color-mint: #9FF3D3;
+  --color-lavender: #B9A7FF;
+  --color-cream: #FFF8EE;
+  --color-navy: #1B1B3A;
+  --color-peach: #FFB088;
+}
+
+.font-display {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-mono-retro {
+  font-family: 'Space Mono', monospace;
+}
+
+.font-body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Retro CRT and dial-up scanline effects */
+.crt-scanlines {
+  background: linear-gradient(
+    rgba(27, 27, 58, 0) 50%, 
+    rgba(27, 27, 58, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Custom marquee */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 24s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* Wavy ghost tail float */
+@keyframes ghost-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1.5deg); }
+}
+
+.animate-float {
+  animation: ghost-float 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float {
+    animation: none;
+  }
+}
