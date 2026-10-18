@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Sparkles, Radio, Heart } from 'lucide-react';
+import { Volume2, VolumeX, Sun, Moon } from 'lucide-react';
 import type { PingletMood } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
 
@@ -22,7 +22,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
 
   const handleModemTap = () => {
     const next = modemTaps + 1;
-    audioSystem.playTone(800 + next * 200, 0.08, 'sine');
+    audioSystem.playTone(740 + next * 180, 0.09, 'sine');
     if (next >= 3) {
       setModemTaps(0);
       onTriggerEasterEgg();
@@ -31,105 +31,121 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
     }
   };
 
-  const moods: PingletMood[] = ['shy', 'excited', 'sleepy', 'glitchy'];
+  const isNightMode = currentMood === 'sleepy' || currentMood === 'glitchy';
+
+  const handleDayNightToggle = () => {
+    const nextMood: PingletMood = isNightMode ? 'excited' : 'sleepy';
+    onSelectMood(nextMood);
+    audioSystem.playTone(nextMood === 'excited' ? 587.33 : 329.63, 0.16, 'triangle');
+  };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#1B1B3A]/95 backdrop-blur-md border-b-2 border-[#9FF3D3]/30">
-      {/* 90s Marquee Strip */}
-      <div className="bg-[#9FF3D3] text-[#1B1B3A] overflow-hidden whitespace-nowrap py-1.5 border-b border-[#1B1B3A] text-xs font-mono-retro font-bold">
-        <div className="animate-marquee flex items-center gap-6">
-          <span className="flex items-center gap-1.5">✦ PINGLET JUNIOR PACKET COURIER #0404</span>
-          <span className="flex items-center gap-1.5">✦ HAND-DELIVERING LOST MESSAGES SINCE 3:00 AM</span>
-          <span className="flex items-center gap-1.5">✦ 56K DIAL-UP HANDSHAKE PROTOCOL OK</span>
-          <span className="flex items-center gap-1.5">✦ &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo;</span>
-          <span className="flex items-center gap-1.5">✦ ATTIC TELEPHONE NETWORK ONLINE</span>
-          <span className="flex items-center gap-1.5">✦ ALL UNSENT DRAFTS WELCOME</span>
-          {/* Loop repeat */}
-          <span className="flex items-center gap-1.5">✦ PINGLET JUNIOR PACKET COURIER #0404</span>
-          <span className="flex items-center gap-1.5">✦ HAND-DELIVERING LOST MESSAGES SINCE 3:00 AM</span>
-          <span className="flex items-center gap-1.5">✦ 56K DIAL-UP HANDSHAKE PROTOCOL OK</span>
-          <span className="flex items-center gap-1.5">✦ &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo;</span>
-          <span className="flex items-center gap-1.5">✦ ATTIC TELEPHONE NETWORK ONLINE</span>
-          <span className="flex items-center gap-1.5">✦ ALL UNSENT DRAFTS WELCOME</span>
+    <header className="sticky top-0 z-40 bg-[#1B1B3A]/95 border-b-3 border-[#1B1B3A] shadow-lg">
+      {/* Retro-Web Touch #1: Marquee Strip */}
+      <div className="bg-[#FFF0B3] text-[#1B1B3A] overflow-hidden whitespace-nowrap py-1 border-b-2 border-[#1B1B3A] text-xs font-mono-retro font-bold">
+        <div className="animate-marquee flex items-center gap-8">
+          <span>• PINGLET · SERIES 01 JELLY RESIN DESIGNER TOY</span>
+          <span>• &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo;</span>
+          <span>• BORN AT 3:00 A.M. IN A DIAL-UP HANDSHAKE</span>
+          <span>• JUNIOR PACKET COURIER OF THE OLD WEB</span>
+          <span>• PINGLET · SERIES 01 JELLY RESIN DESIGNER TOY</span>
+          <span>• &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo;</span>
+          <span>• BORN AT 3:00 A.M. IN A DIAL-UP HANDSHAKE</span>
+          <span>• JUNIOR PACKET COURIER OF THE OLD WEB</span>
         </div>
       </div>
 
-      {/* Main Nav Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
-        {/* Brand & Blinking Modem Light (Easter Egg) */}
-        <div className="flex items-center gap-3">
+      {/* Main Sticky Control Bar (Minimum 44px touch targets) */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
+        {/* Left: Blinking Modem Light (3-Tap Easter Egg) + Brand */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
+            type="button"
             onClick={handleModemTap}
-            className="group relative flex items-center gap-2 px-2.5 py-1 rounded bg-[#26264d] border border-white/10 hover:border-[#9FF3D3] cursor-pointer transition-all text-left"
-            title="Blinking modem light: Tap 3 times for a secret dial-up surprise!"
-            aria-label="Modem status indicator. Tap 3 times for easter egg."
+            className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#282854] hover:bg-[#34346b] border-2 border-[#9FF3D3]/60 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+            title="Tiny blinking modem light — tap 3 times!"
+            aria-label={`Tiny blinking modem light. Tap 3 times for secret message. Current taps: ${modemTaps}`}
           >
-            {/* Blinking modem LED */}
             <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9FF3D3] opacity-75" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9FF3D3] opacity-80" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-[#9FF3D3]" />
             </span>
-            <span className="font-mono-retro text-[11px] text-[#9FF3D3] font-bold">
-              56K MODEM {modemTaps > 0 ? `(${modemTaps}/3)` : ''}
+            <span className="font-mono-retro text-[11px] text-[#9FF3D3] font-bold tracking-wider">
+              56K {modemTaps > 0 ? `${modemTaps}/3` : 'LED'}
             </span>
           </button>
 
-          <a href="#hero" className="font-display text-2xl sm:text-3xl text-[#FFF8EE] tracking-wider hover:text-[#9FF3D3] transition-colors">
+          <a
+            href="#hero"
+            className="font-display text-2xl sm:text-3xl text-[#FFF8EE] tracking-wider hover:text-[#9FF3D3] transition-colors py-1"
+          >
             PINGLET
           </a>
         </div>
 
-        {/* Desktop Anchor Navigation */}
-        <nav className="hidden md:flex items-center gap-6 font-mono-retro text-xs tracking-wider uppercase text-[#FFF8EE]/80">
-          <a href="#character" className="hover:text-[#9FF3D3] transition-colors">
-            [ PROFILE ]
+        {/* Center Quick Section Links (Tablet/Desktop) */}
+        <nav
+          aria-label="Primary sections"
+          className="hidden lg:flex items-center gap-5 font-rounded font-semibold text-sm text-[#FFF8EE]/90"
+        >
+          <a href="#meet" className="hover:text-[#9FF3D3] transition-colors py-2">
+            Blind Box
           </a>
-          <a href="#moods" className="hover:text-[#B9A7FF] transition-colors">
-            [ MOODS ]
+          <a href="#moods" className="hover:text-[#FFC9A8] transition-colors py-2">
+            Moods
           </a>
-          <a href="#work" className="hover:text-[#FFB088] transition-colors">
-            [ WORK & GAMES ]
+          <a href="#work" className="hover:text-[#B9A7FF] transition-colors py-2">
+            Toy Box
           </a>
-          <a href="#story" className="hover:text-[#9FF3D3] transition-colors">
-            [ STORY ]
+          <a href="#story" className="hover:text-[#FFF0B3] transition-colors py-2">
+            Story
           </a>
         </nav>
 
-        {/* Mood Switcher & Global Mute Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Mood Selector Buttons */}
-          <div className="hidden sm:flex items-center bg-[#232347] p-1 rounded-lg border border-white/10">
-            {moods.map((m) => (
-              <button
-                key={m}
-                onClick={() => onSelectMood(m)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-mono-retro uppercase tracking-wider transition-all cursor-pointer ${
-                  currentMood === m
-                    ? 'bg-[#9FF3D3] text-[#1B1B3A] font-bold shadow-xs'
-                    : 'text-[#FFF8EE]/70 hover:text-white'
-                }`}
-                aria-label={`Switch Pinglet mood to ${m}`}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-
-          {/* Accessible Global Mute Toggle */}
+        {/* Right: Day/Night Mood Toggle + Fixed Visible Mute Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Day = Excited / Night = Sleepy Mood Toggle */}
           <button
-            onClick={onToggleMute}
-            className={`p-2 rounded-lg font-mono-retro text-xs border cursor-pointer transition-all flex items-center gap-1.5 ${
-              isMuted
-                ? 'bg-red-500/20 text-red-300 border-red-400/40'
-                : 'bg-[#232347] text-[#9FF3D3] border-white/10 hover:border-[#9FF3D3]'
+            type="button"
+            onClick={handleDayNightToggle}
+            className={`min-h-[44px] px-3.5 py-1.5 rounded-full font-rounded font-bold text-xs sm:text-sm border-2 border-[#1B1B3A] shadow-md flex items-center gap-1.5 cursor-pointer transition-all ${
+              isNightMode
+                ? 'bg-[#B9A7FF] text-[#1B1B3A]'
+                : 'bg-[#FFF0B3] text-[#1B1B3A]'
             }`}
-            aria-label={isMuted ? 'Unmute sound' : 'Mute sound'}
-            title={isMuted ? 'Unmute sound' : 'Mute sound'}
+            aria-label={
+              isNightMode
+                ? 'Switch mood toggle to Day (Excited)'
+                : 'Switch mood toggle to Night (Sleepy)'
+            }
+          >
+            {isNightMode ? (
+              <>
+                <Moon className="w-4 h-4 fill-current" />
+                <span>NIGHT · SLEEPY</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-4 h-4 fill-current" />
+                <span>DAY · EXCITED</span>
+              </>
+            )}
+          </button>
+
+          {/* Fixed Visible Global Audio Mute Toggle */}
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className={`min-h-[44px] min-w-[44px] px-3.5 py-1.5 rounded-full font-rounded font-bold text-xs sm:text-sm border-2 cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+              isMuted
+                ? 'bg-[#E86FA0] text-[#1B1B3A] border-[#1B1B3A]'
+                : 'bg-[#9FF3D3] text-[#1B1B3A] border-[#1B1B3A]'
+            }`}
+            aria-label={isMuted ? 'Unmute all audio' : 'Mute all audio'}
+            aria-pressed={isMuted}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            <span className="hidden sm:inline text-[11px] font-bold">
-              {isMuted ? 'MUTE' : 'AUDIO'}
-            </span>
+            <span className="hidden sm:inline">{isMuted ? 'MUTED' : 'SOUND ON'}</span>
           </button>
         </div>
       </div>

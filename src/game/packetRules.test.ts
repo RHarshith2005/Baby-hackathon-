@@ -5,7 +5,16 @@ import {
   calculateCatchScore,
   determineGameMood,
   createPacketData,
+  formatOdometerDigits,
+  GAME_DURATION_SECONDS,
 } from './packetRules.ts';
+
+test('formatOdometerDigits pads numbers to 6 digits accurately', () => {
+  assert.deepEqual(formatOdometerDigits(4042), ['0', '0', '4', '0', '4', '2']);
+  assert.deepEqual(formatOdometerDigits(0), ['0', '0', '0', '0', '0', '0']);
+  assert.deepEqual(formatOdometerDigits(123456), ['1', '2', '3', '4', '5', '6']);
+  assert.equal(GAME_DURATION_SECONDS, 20);
+});
 
 test('isPacketCaught returns true when packet is within hitzone and x bounds', () => {
   const packetIn = { x: 50, y: 80 };
@@ -26,24 +35,20 @@ test('isPacketCaught returns true when packet is within hitzone and x bounds', (
 });
 
 test('calculateCatchScore applies combo multipliers for streaks', () => {
-  // First catch: streak = 0 -> streak becomes 1, no multiplier (1.0x)
   const r1 = calculateCatchScore(0, 0, 10);
   assert.equal(r1.score, 10);
   assert.equal(r1.streak, 1);
   assert.equal(r1.earned, 10);
 
-  // Streak 5 -> multiplier = 1 + floor(5/5)*0.5 = 1.5x
   const r2 = calculateCatchScore(100, 5, 20);
   assert.equal(r2.earned, 30);
   assert.equal(r2.score, 130);
   assert.equal(r2.streak, 6);
 
-  // Negative points (bitrot) resets streak and deducts
   const r3 = calculateCatchScore(50, 8, -15);
   assert.equal(r3.score, 35);
   assert.equal(r3.streak, 0);
 
-  // Score cannot go below 0
   const r4 = calculateCatchScore(5, 0, -20);
   assert.equal(r4.score, 0);
 });

@@ -1,121 +1,70 @@
 import React from 'react';
-import { Heart, Globe, Sparkles, ExternalLink, Mail, Disc } from 'lucide-react';
-import { audioSystem } from '../utils/audioSynth';
+import { formatOdometerDigits } from '../game/packetRules';
 
 interface FooterSectionProps {
+  hellosDelivered: number;
   onTriggerEasterEgg: () => void;
 }
 
 export const FooterSection: React.FC<FooterSectionProps> = ({
+  hellosDelivered,
   onTriggerEasterEgg,
 }) => {
+  const digits = formatOdometerDigits(hellosDelivered, 6);
+
   return (
-    <footer className="w-full bg-[#121224] text-[#FFF8EE] p-8 sm:p-12 md:p-16 border-t-4 border-black relative overflow-hidden">
-      <div className="max-w-6xl mx-auto space-y-12">
-        {/* Giant PINGLET Heading */}
-        <div className="text-center">
-          <span className="font-mono-retro text-xs sm:text-sm text-[#9FF3D3] uppercase tracking-widest block mb-2">
-            // TERMINAL SESSION TERMINATION // #0404
+    <footer className="w-full bg-[#1B1B3A] text-[#FFF8EE] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-t-4 border-[#1B1B3A] relative overflow-hidden">
+      <div className="max-w-5xl mx-auto text-center space-y-8">
+        {/* Retro-Web Touch #3: Hit-Counter Odometer ("Hellos delivered") */}
+        <div className="inline-flex flex-col sm:flex-row items-center gap-3 sm:gap-4 bg-[#282854] px-6 py-4 rounded-3xl border-3 border-[#9FF3D3]/60 shadow-xl">
+          <span className="font-rounded font-bold text-sm sm:text-base uppercase tracking-wider text-[#9FF3D3]">
+            HELLOS DELIVERED
           </span>
-          <h2 className="font-display text-7xl sm:text-9xl md:text-[11rem] leading-[0.85] tracking-tight text-[#9FF3D3] select-none hover:text-[#B9A7FF] transition-colors">
+          <div
+            className="flex items-center gap-1.5"
+            aria-label={`${hellosDelivered} hellos delivered`}
+          >
+            {digits.map((d, idx) => (
+              <span
+                key={idx}
+                className="w-9 h-11 sm:w-10 sm:h-12 rounded-xl bg-[#12122B] border-2 border-[#FFF0B3] font-mono-retro font-bold text-xl sm:text-2xl text-[#FFF0B3] flex items-center justify-center shadow-inner"
+              >
+                {d}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Giant Stacked "PINGLET" */}
+        <div>
+          <h2 className="font-display text-7xl sm:text-9xl md:text-[10.5rem] leading-[0.84] tracking-tight text-[#9FF3D3] uppercase select-none">
             PINGLET
           </h2>
-          <p className="font-mono-retro text-sm sm:text-base text-[#FFF8EE]/70 mt-4">
+          <p className="font-rounded font-semibold text-lg sm:text-xl text-[#FFC9A8] mt-2">
             &ldquo;I carry little hellos across the wires.&rdquo;
           </p>
         </div>
 
-        {/* Retro Webring Box */}
-        <div className="bg-[#1B1B3A] p-6 rounded-2xl border-3 border-[#B9A7FF]/40 max-w-2xl mx-auto text-center space-y-4 shadow-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#B9A7FF] text-[#1B1B3A] text-xs font-mono-retro font-bold uppercase rounded-sm">
-            <Globe className="w-3.5 h-3.5" /> [ - THE RETRO PACKET WEBRING - ]
-          </div>
-          <p className="font-body text-xs sm:text-sm text-[#FFF8EE]/85 max-w-md mx-auto">
-            You are currently visiting Site <strong>#0404</strong> of the Old Web Courier Ring. Connecting vintage attic modems and forgotten telephone lines since 1999.
+        {/* Secret Hug Trigger Button (44px+ touch target) */}
+        <div>
+          <button
+            type="button"
+            onClick={onTriggerEasterEgg}
+            className="min-h-[48px] px-6 py-2.5 rounded-full bg-[#E86FA0] hover:bg-[#f07ead] text-[#1B1B3A] font-rounded font-bold text-sm sm:text-base uppercase tracking-wider border-3 border-white shadow-lg cursor-pointer transition-transform hover:scale-105"
+          >
+            💌 OPEN 3:00 A.M. DIAL-UP HUG
+          </button>
+        </div>
+
+        {/* Concise Credits */}
+        <div className="border-t border-white/15 pt-6 text-xs sm:text-sm font-rounded text-[#FFF8EE]/80 space-y-1.5">
+          <p>
+            <strong>Fonts:</strong> Bebas Neue, Fredoka &amp; Space Mono ·{' '}
+            <strong>Libraries:</strong> React, Tailwind CSS, Framer Motion &amp; Web Audio API
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 font-mono-retro text-xs font-bold pt-1">
-            <button
-              onClick={() => {
-                audioSystem.playTone(392, 0.1, 'sine');
-                alert('Navigating to previous webring node: #0403 (BBS Attic Archives)');
-              }}
-              className="px-4 py-2 bg-[#26264d] hover:bg-[#343466] border border-white/20 rounded-lg text-[#9FF3D3] transition-all cursor-pointer"
-            >
-              ◄ PREV NODE
-            </button>
-            <span className="px-4 py-2 bg-[#9FF3D3] text-[#1B1B3A] rounded-lg shadow-xs">
-              PACKET-RING #0404
-            </span>
-            <button
-              onClick={() => {
-                audioSystem.playTone(523.25, 0.1, 'sine');
-                alert('Navigating to next webring node: #0405 (Dial-Up Lullaby Station)');
-              }}
-              className="px-4 py-2 bg-[#26264d] hover:bg-[#343466] border border-white/20 rounded-lg text-[#9FF3D3] transition-all cursor-pointer"
-            >
-              NEXT NODE ►
-            </button>
-            <button
-              onClick={onTriggerEasterEgg}
-              className="px-3 py-2 bg-[#FFB088] hover:bg-[#ffa072] text-[#1B1B3A] rounded-lg transition-all cursor-pointer"
-              title="Trigger dial-up hug surprise"
-            >
-              ✉ RANDOM MAIL
-            </button>
-          </div>
-        </div>
-
-        {/* 88x31 Retro Web Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          {/* Badge 1 */}
-          <div className="w-[120px] h-[36px] bg-black border-2 border-zinc-500 flex items-center justify-between px-2 font-mono-retro text-[9px] text-white">
-            <span className="text-[#9FF3D3] font-bold">800x600</span>
-            <span className="text-zinc-400">BEST VIEW</span>
-          </div>
-
-          {/* Badge 2 */}
-          <div className="w-[120px] h-[36px] bg-[#1B1B3A] border-2 border-[#9FF3D3] flex items-center justify-center px-1 font-mono-retro text-[9px] text-[#9FF3D3] font-bold">
-            CRT GLOW OK
-          </div>
-
-          {/* Badge 3 */}
-          <div className="w-[120px] h-[36px] bg-[#3B1C52] border-2 border-[#B9A7FF] flex items-center justify-center px-1 font-mono-retro text-[9px] text-[#B9A7FF] font-bold">
-            56K DIAL-UP READY
-          </div>
-
-          {/* Badge 4 */}
-          <div className="w-[120px] h-[36px] bg-[#2E3B1C] border-2 border-[#9FF3D3] flex items-center justify-center px-1 font-mono-retro text-[9px] text-[#9FF3D3] font-bold">
-            ZERO BIT-ROT
-          </div>
-
-          {/* Badge 5 */}
-          <div className="w-[120px] h-[36px] bg-[#471E1E] border-2 border-[#FFB088] flex items-center justify-center px-1 font-mono-retro text-[9px] text-[#FFB088] font-bold">
-            NO SPIDERS ALLOWED
-          </div>
-        </div>
-
-        {/* Credits Section */}
-        <div className="border-t border-white/10 pt-8 grid sm:grid-cols-3 gap-6 text-xs font-mono-retro text-[#FFF8EE]/70">
-          <div>
-            <span className="text-[#9FF3D3] font-bold block mb-1 uppercase">TYPOGRAPHY</span>
-            <p>Bebas Neue (Headings) & Space Mono (Courier Data) via Google Fonts.</p>
-          </div>
-
-          <div>
-            <span className="text-[#B9A7FF] font-bold block mb-1 uppercase">3D & GRAPHICS</span>
-            <p>Three.js procedural soft-clay vinyl PBR rendering, Studio RoomEnvironment & inline SVG.</p>
-          </div>
-
-          <div>
-            <span className="text-[#FFB088] font-bold block mb-1 uppercase">SYNTHESIS & AUDIO</span>
-            <p>Web Audio API pentatonic sine/triangle procedural generator. Zero audio sample files.</p>
-          </div>
-        </div>
-
-        {/* Bottom copyright / sign-off */}
-        <div className="border-t border-white/10 pt-6 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono-retro text-[#FFF8EE]/50">
-          <span>Pinglet the Ghost © 1999–2026. Hand-delivering little hellos.</span>
-          <span>BORN AT 3:00 AM • TRANSMISSION COMPLETE</span>
+          <p className="text-[#FFF0B3] font-semibold">
+            Character art generated with Gemini · Original character Pinglet (#0404)
+          </p>
         </div>
       </div>
     </footer>

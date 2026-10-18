@@ -1,13 +1,13 @@
 /**
- * Core game mechanics and state transitions for "Catch the Packets".
- * Pure functions decoupled from React and Three.js for deterministic testing.
+ * Core game mechanics, odometer formatting, and state transitions for Pinglet.
+ * Pure functions decoupled from React for deterministic unit testing.
  */
 
 export type PingletMood = 'shy' | 'excited' | 'sleepy' | 'glitchy';
 
 export interface Packet {
   id: string;
-  x: number; // 0 to 100 percentage of lane width
+  x: number; // 12 to 88 percentage of width
   y: number; // 0 to 100 percentage from top to bottom
   speed: number;
   type: 'hello' | 'ping' | 'sparkle' | 'bitrot';
@@ -16,14 +16,14 @@ export interface Packet {
   glowColor: string;
 }
 
-export interface PlayerCatchState {
-  playerX: number; // 0 to 100 percentage
-  playerWidth: number; // hit width in percentage
-  score: number;
-  streak: number;
-  bestScore: number;
-  missed: number;
-  mood: PingletMood;
+export const GAME_DURATION_SECONDS = 20;
+
+/**
+ * Formats a hit-counter number into a 6-digit padded array of digit strings for the odometer.
+ */
+export function formatOdometerDigits(count: number, digits: number = 6): string[] {
+  const clamped = Math.max(0, Math.floor(count));
+  return String(clamped).padStart(digits, '0').split('');
 }
 
 /**
@@ -46,7 +46,7 @@ export function isPacketCaught(
 }
 
 /**
- * Calculates updated score and streak multiplier.
+ * Calculates updated score and streak multiplier when a packet is tapped or caught.
  */
 export function calculateCatchScore(
   currentScore: number,
@@ -54,7 +54,6 @@ export function calculateCatchScore(
   points: number
 ): { score: number; streak: number; earned: number } {
   if (points <= 0) {
-    // Bad packet (e.g., bitrot) resets streak and deducts
     const earned = points;
     const newScore = Math.max(0, currentScore + earned);
     return { score: newScore, streak: 0, earned };
@@ -81,7 +80,7 @@ export function determineGameMood(
     return 'sleepy';
   }
   if (streak >= 8 || score >= 250) {
-    return 'glitchy'; // hyper-speed attic 3am mode!
+    return 'glitchy';
   }
   if (score >= 60 || streak >= 3) {
     return 'excited';
@@ -90,63 +89,50 @@ export function determineGameMood(
 }
 
 /**
- * Generates packet specifications based on wave/time progression.
+ * Generates falling candy-envelope packet specifications.
  */
 export function createPacketData(
   seed: number,
   idCounter: number,
   timeSec: number
 ): Packet {
-  const lanePositions = [15, 30, 48, 65, 82];
-  const chosenX = lanePositions[Math.abs(seed) % lanePositions.length];
-  
-  // Base speed scales gently with time
-  const baseSpeed = 18 + Math.min(22, timeSec * 0.5);
+  const lanePositions = [16, 32, 50, 68, 84];
+  const chosenX = lanePositions[Math.abs(seed + idCounter * 3) % lanePositions.length];
+  const baseSpeed = 20 + Math.min(24, timeSec * 0.8);
 
-  const roll = (seed * 17 + idCounter * 31) % 100;
+  const roll = Math.abs(seed * 17 + idCounter * 31) % 100;
   if (roll < 55) {
     return {
       id: `pkt-${idCounter}`,
       x: chosenX,
-      y: 0,
+      y: -5,
       speed: baseSpeed,
       type: 'hello',
       points: 10,
-      label: 'HELLO.TXT',
+      label: 'HELLO!',
       glowColor: '#9FF3D3',
     };
-  } else if (roll < 80) {
+  } else if (roll < 85) {
     return {
       id: `pkt-${idCounter}`,
       x: chosenX,
-      y: 0,
-      speed: baseSpeed * 1.15,
+      y: -5,
+      speed: baseSpeed * 1.12,
       type: 'ping',
-      points: 25,
-      label: 'PING 56K',
+      points: 20,
+      label: 'CANDY PING',
       glowColor: '#B9A7FF',
-    };
-  } else if (roll < 92) {
-    return {
-      id: `pkt-${idCounter}`,
-      x: chosenX,
-      y: 0,
-      speed: baseSpeed * 1.3,
-      type: 'sparkle',
-      points: 50,
-      label: 'UNSENT KISS',
-      glowColor: '#FFB088',
     };
   } else {
     return {
       id: `pkt-${idCounter}`,
       x: chosenX,
-      y: 0,
-      speed: baseSpeed * 0.9,
-      type: 'bitrot',
-      points: -15,
-      label: 'BIT-ROT',
-      glowColor: '#FF6B6B',
+      y: -5,
+      speed: baseSpeed * 1.25,
+      type: 'sparkle',
+      points: 35,
+      label: 'STAR HUG',
+      glowColor: '#FFF0B3',
     };
   }
 }

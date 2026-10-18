@@ -1,225 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { Send, Heart, Stamp, Sparkles, Mail, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send } from 'lucide-react';
+import { PingletSvg } from './PingletSvg';
 import { audioSystem } from '../utils/audioSynth';
 
-interface WishMessage {
+interface StickerWish {
   id: string;
-  sender: string;
-  message: string;
-  stamp: string;
-  timestamp: string;
+  text: string;
+  color: string;
+  tilt: number;
 }
 
-const DEFAULT_MESSAGES: WishMessage[] = [
-  {
-    id: 'm-1',
-    sender: 'dialup_dreamer',
-    message: 'I stayed up waiting for your AIM away message to change into lyric quotes.',
-    stamp: '56K-STAMP',
-    timestamp: '3:04 AM',
-  },
-  {
-    id: 'm-2',
-    sender: 'attic_phosphor',
-    message: 'Mom, please do not pick up the telephone! I am downloading a 320x240 image!',
-    stamp: 'CRT-GLOW',
-    timestamp: '3:12 AM',
-  },
-  {
-    id: 'm-3',
-    sender: 'quiet_stars',
-    message: 'To whoever is reading this in the dark: Pinglet is keeping your little hello safe.',
-    stamp: 'MIDNIGHT',
-    timestamp: '3:29 AM',
-  },
+const STICKER_COLORS = ['#FFF0B3', '#9FF3D3', '#B9A7FF', '#FFD1E6', '#FFF8EE'];
+
+const DEFAULT_STICKERS: StickerWish[] = [
+  { id: 's-1', text: 'Hello from 3:00 a.m.!', color: '#FFF0B3', tilt: -3 },
+  { id: 's-2', text: 'Sending you a candy-wrapped hug!', color: '#9FF3D3', tilt: 2 },
+  { id: 's-3', text: 'Still awake under the CRT glow ✨', color: '#B9A7FF', tilt: -2 },
+  { id: 's-4', text: 'Don’t pick up the phone, Mom!', color: '#FFD1E6', tilt: 3 },
 ];
 
-export const WishWall: React.FC = () => {
-  const [messages, setMessages] = useState<WishMessage[]>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('pinglet_wishes');
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          return DEFAULT_MESSAGES;
+interface WishWallProps {
+  onIncrementHellos?: () => void;
+}
+
+export const WishWall: React.FC<WishWallProps> = ({ onIncrementHellos }) => {
+  const [stickers, setStickers] = useState<StickerWish[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('pinglet_sticker_wishes');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         }
       }
+    } catch {
+      // Fallback to default stickers if localStorage is unavailable
     }
-    return DEFAULT_MESSAGES;
+    return DEFAULT_STICKERS;
   });
 
-  const [inputSender, setInputSender] = useState('');
-  const [inputMessage, setInputMessage] = useState('');
-  const [selectedStamp, setSelectedStamp] = useState('56K-STAMP');
-  const [justSent, setJustSent] = useState(false);
+  const [helloInput, setHelloInput] = useState('');
 
-  const stamps = [
-    { id: '56K-STAMP', label: '56k Modem', icon: '📞' },
-    { id: 'CRT-GLOW', label: 'CRT Glow', icon: '📺' },
-    { id: 'MIDNIGHT', label: 'Midnight Attic', icon: '🌙' },
-    { id: 'BABY-GHOST', label: 'Pinglet Hug', icon: '👻' },
-  ];
-
-  const handleSend = (e: React.FormEvent) => {
+  const handleAddSticker = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    const trimmed = helloInput.trim();
+    if (!trimmed) return;
 
-    const newMsg: WishMessage = {
-      id: `w-${Date.now()}`,
-      sender: inputSender.trim() || 'Anonymous Courier',
-      message: inputMessage.trim(),
-      stamp: selectedStamp,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    const nextSticker: StickerWish = {
+      id: `st-${Date.now()}`,
+      text: trimmed,
+      color: STICKER_COLORS[stickers.length % STICKER_COLORS.length],
+      tilt: ((stickers.length % 5) - 2) * 2,
     };
 
-    const updated = [newMsg, ...messages];
-    setMessages(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('pinglet_wishes', JSON.stringify(updated.slice(0, 30)));
+    const updated = [nextSticker, ...stickers].slice(0, 24);
+    setStickers(updated);
+
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pinglet_sticker_wishes', JSON.stringify(updated));
+      }
+    } catch {
+      // Safely ignore quota/privacy errors
     }
 
-    setInputMessage('');
-    setInputSender('');
-    setJustSent(true);
-    audioSystem.playTone(523.25, 0.2, 'triangle');
-    setTimeout(() => audioSystem.playTone(659.25, 0.35, 'sine'), 100);
-
-    setTimeout(() => setJustSent(false), 3500);
+    setHelloInput('');
+    if (onIncrementHellos) {
+      onIncrementHellos();
+    }
+    audioSystem.playTone(523.25, 0.16, 'triangle');
+    window.setTimeout(() => audioSystem.playTone(659.25, 0.24, 'sine'), 90);
   };
 
   return (
-    <div className="w-full bg-[#1B1B3A] text-[#FFF8EE] rounded-3xl p-5 sm:p-7 md:p-8 border-4 border-[#FFB088]/40 shadow-2xl relative overflow-hidden">
-      {/* Corner retro tag */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-xs font-mono-retro tracking-widest uppercase">
-        <span className="px-3 py-1 bg-[#FFB088] text-[#1B1B3A] font-bold rounded-sm flex items-center gap-1.5">
-          <Mail className="w-3.5 h-3.5" /> [ - WORK 03 : THE WISH WALL - ]
-        </span>
-        <span className="text-[#9FF3D3] bg-[#1B1B3A] px-3 py-1 border border-[#9FF3D3]/30 rounded-sm">
-          UNSENT HELLOS PROTOCOL OK
+    <div className="relative w-full bg-[#FFC9A8] text-[#1B1B3A] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-b-4 border-[#1B1B3A] overflow-hidden">
+      {/* Pale Oversized Circle Arc */}
+      <div
+        className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full border-[42px] border-white/30 pointer-events-none"
+        aria-hidden="true"
+      />
+
+      {/* Huge Ghosted Word Behind Character */}
+      <div
+        className="absolute inset-0 flex items-center justify-center select-none pointer-events-none overflow-hidden"
+        aria-hidden="true"
+      >
+        <span className="font-display text-[26vw] leading-none text-white/40 tracking-widest font-extrabold">
+          WISHES
         </span>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        {/* Form Column */}
-        <div className="lg:col-span-5 bg-[#24244a] p-5 sm:p-6 rounded-2xl border border-white/10">
-          <h3 className="font-display text-3xl sm:text-4xl text-[#FFB088] mb-1">
-            HAND-DELIVER AN UNSENT HELLO
-          </h3>
-          <p className="font-body text-xs sm:text-sm text-[#FFF8EE]/80 mb-4">
-            Type a quiet thought, an old unsent draft, or a gentle hello into Pinglet&apos;s courier pouch.
-          </p>
-
-          <form onSubmit={handleSend} className="space-y-3.5">
-            <div>
-              <label htmlFor="courier-name" className="block text-[11px] font-mono-retro uppercase tracking-wider text-[#9FF3D3] mb-1">
-                Your Handle / Alias (optional)
-              </label>
-              <input
-                id="courier-name"
-                type="text"
-                value={inputSender}
-                onChange={(e) => setInputSender(e.target.value)}
-                placeholder="e.g. wire_wanderer"
-                maxLength={25}
-                className="w-full px-3 py-2 bg-[#12122b] border border-white/20 rounded-lg text-sm font-mono-retro text-white focus:outline-hidden focus:border-[#9FF3D3]"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="courier-message" className="block text-[11px] font-mono-retro uppercase tracking-wider text-[#B9A7FF] mb-1">
-                Unsent Message / Hello
-              </label>
-              <textarea
-                id="courier-message"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Write your hello here..."
-                required
-                rows={3}
-                maxLength={180}
-                className="w-full px-3 py-2 bg-[#12122b] border border-white/20 rounded-lg text-sm font-body text-white focus:outline-hidden focus:border-[#B9A7FF] resize-none"
-              />
-              <span className="text-[10px] font-mono-retro text-white/40 float-right">
-                {180 - inputMessage.length} chars left
-              </span>
-            </div>
-
-            <div>
-              <span className="block text-[11px] font-mono-retro uppercase tracking-wider text-[#FFB088] mb-1.5">
-                Postal Seal Stamp
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                {stamps.map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setSelectedStamp(st.id)}
-                    className={`px-3 py-2 rounded-lg text-xs font-mono-retro flex items-center gap-1.5 border cursor-pointer transition-all ${
-                      selectedStamp === st.id
-                        ? 'bg-[#FFB088] text-[#1B1B3A] border-[#FFF8EE] font-bold shadow-xs'
-                        : 'bg-[#181836] text-[#FFF8EE]/80 border-white/10 hover:border-white/30'
-                    }`}
-                  >
-                    <span>{st.icon}</span>
-                    <span className="truncate">{st.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full mt-2 py-3 bg-[#FFB088] hover:bg-[#ffa072] text-[#1B1B3A] font-display text-2xl tracking-wider rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Send className="w-5 h-5 fill-current" /> DISPATCH TO WIRES
-            </button>
-
-            {justSent && (
-              <div className="p-3 bg-[#9FF3D3]/20 border border-[#9FF3D3] text-[#9FF3D3] rounded-lg text-xs font-mono-retro flex items-center gap-2 animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Pinglet folded your message and set off into the attic!</span>
-              </div>
-            )}
-          </form>
+      <div className="relative z-10 max-w-6xl mx-auto">
+        {/* Tiny Corner Mood Tag with Dash Mark */}
+        <div className="flex items-center justify-between gap-2 mb-6 text-xs font-mono-retro font-bold uppercase tracking-widest">
+          <span className="px-3.5 py-1.5 rounded-full bg-[#1B1B3A] text-[#FFC9A8]">
+            &mdash; WORK 03 : STICKER WALL
+          </span>
         </div>
 
-        {/* Live Stream Column */}
-        <div className="lg:col-span-7">
-          <div className="flex items-center justify-between mb-3 text-xs font-mono-retro text-[#9FF3D3]">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#FFB088]" />
-              <span>LIVE PACKET STREAM ({messages.length} HELLOS)</span>
-            </span>
-            <span className="text-[#FFF8EE]/50">3:00 AM BUFFER</span>
+        <div className="grid lg:grid-cols-12 gap-8 items-center">
+          {/* Left: Heading (3 words), Caption (<15 words), Input + Pinglet Render */}
+          <div className="lg:col-span-5 text-center lg:text-left space-y-5">
+            <h2 className="font-display text-6xl sm:text-8xl tracking-tight leading-[0.88] uppercase">
+              THE WISH WALL
+            </h2>
+
+            <p className="font-rounded font-semibold text-xl sm:text-2xl leading-snug">
+              Type a tiny hello to pin a glossy candy sticker on the wall.
+            </p>
+
+            <form onSubmit={handleAddSticker} className="flex flex-col sm:flex-row gap-2.5">
+              <label htmlFor="wish-sticker-input" className="sr-only">
+                Type a tiny hello for the sticker wall
+              </label>
+              <input
+                id="wish-sticker-input"
+                type="text"
+                value={helloInput}
+                onChange={(e) => setHelloInput(e.target.value)}
+                placeholder="Write a tiny hello..."
+                maxLength={70}
+                required
+                className="flex-1 min-h-[48px] px-4 py-2.5 rounded-full bg-[#FFF8EE] text-[#1B1B3A] font-rounded font-semibold text-base border-3 border-[#1B1B3A] focus:outline-none focus:ring-4 focus:ring-[#9FF3D3]"
+              />
+              <button
+                type="submit"
+                className="min-h-[48px] px-6 py-2.5 rounded-full bg-[#1B1B3A] text-[#FFF0B3] font-rounded font-bold text-sm sm:text-base uppercase tracking-wider border-3 border-[#1B1B3A] toy-button-gloss flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <Send className="w-4 h-4" /> PIN STICKER
+              </button>
+            </form>
+
+            <div className="w-44 h-44 mx-auto lg:mx-0 animate-toy-float">
+              <PingletSvg
+                mood="excited"
+                size={176}
+                showBackdrop={false}
+                className="w-full h-auto"
+                alt="Pinglet holding a candy-wrapped envelope next to the wish sticker wall"
+              />
+            </div>
           </div>
 
-          <div className="space-y-3 max-h-[460px] overflow-y-auto pr-2 scrollbar-thin">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className="bg-[#212142] p-4 rounded-xl border border-white/10 hover:border-[#9FF3D3]/40 transition-all relative overflow-hidden"
-              >
-                {/* Vintage postal stamp in top-right */}
-                <div className="absolute top-3 right-3 px-2 py-0.5 bg-[#FFF8EE] text-[#1B1B3A] text-[10px] font-mono-retro font-bold rounded-xs border border-dashed border-[#1B1B3A]/40 uppercase shadow-xs">
-                  {m.stamp}
-                </div>
-
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#9FF3D3]" />
-                  <span className="font-mono-retro font-bold text-xs text-[#9FF3D3]">
-                    @{m.sender}
+          {/* Right: Glossy Die-Cut Sticker Wall */}
+          <div className="lg:col-span-7 bg-[#1B1B3A] p-5 sm:p-7 rounded-[2.5rem] border-4 border-[#1B1B3A] toy-panel-shadow">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] overflow-y-auto p-2">
+              {stickers.map((st) => (
+                <div
+                  key={st.id}
+                  style={{
+                    backgroundColor: st.color,
+                    transform: `rotate(${st.tilt}deg)`,
+                  }}
+                  className="p-4 rounded-3xl border-4 border-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] text-[#1B1B3A] flex items-start gap-2.5 transition-transform hover:scale-105"
+                >
+                  <span className="text-xl shrink-0" aria-hidden="true">
+                    💌
                   </span>
-                  <span className="text-[10px] font-mono-retro text-white/40">
-                    • {m.timestamp}
-                  </span>
+                  <p className="font-rounded font-bold text-base sm:text-lg leading-snug break-words">
+                    {st.text}
+                  </p>
                 </div>
-
-                <p className="font-body text-sm text-[#FFF8EE]/90 leading-relaxed pr-16">
-                  &ldquo;{m.message}&rdquo;
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

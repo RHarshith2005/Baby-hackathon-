@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   audioSystem,
   PENTATONIC_SCALE,
-  LULLABY_SEQUENCE,
 } from '../utils/audioSynth';
-import { Play, Pause, Music, Volume2, VolumeX, Sparkles, Disc } from 'lucide-react';
+import { PingletSvg } from './PingletSvg';
+import { Play, Pause, Volume2, VolumeX, Music } from 'lucide-react';
 
 interface DialUpLullabyProps {
   isMuted: boolean;
@@ -21,9 +21,11 @@ export const DialUpLullaby: React.FC<DialUpLullabyProps> = ({
   useEffect(() => {
     audioSystem.setOnTrackNoteChange((note) => {
       setActiveNote(note);
-      // Auto clear highlight after 300ms
-      setTimeout(() => setActiveNote((n) => (n === note ? null : n)), 300);
+      window.setTimeout(() => setActiveNote((n) => (n === note ? null : n)), 280);
     });
+    return () => {
+      audioSystem.stopLullaby();
+    };
   }, []);
 
   const togglePlayback = () => {
@@ -38,116 +40,142 @@ export const DialUpLullaby: React.FC<DialUpLullabyProps> = ({
   };
 
   const handleManualKeyClick = (noteName: keyof typeof PENTATONIC_SCALE) => {
-    audioSystem.playTone(PENTATONIC_SCALE[noteName], 0.35, 'triangle');
+    audioSystem.playTone(PENTATONIC_SCALE[noteName], 0.32, 'triangle');
     setActiveNote(noteName);
-    setTimeout(() => setActiveNote(null), 300);
+    window.setTimeout(() => setActiveNote(null), 280);
   };
 
   return (
-    <div className="w-full bg-[#1B1B3A] text-[#FFF8EE] rounded-3xl p-5 sm:p-7 md:p-8 border-4 border-[#B9A7FF]/40 shadow-2xl relative overflow-hidden">
-      {/* Corner retro tag */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-xs font-mono-retro tracking-widest uppercase">
-        <span className="px-3 py-1 bg-[#B9A7FF] text-[#1B1B3A] font-bold rounded-sm flex items-center gap-1.5">
-          <Music className="w-3.5 h-3.5" /> [ - WORK 01 : DIAL-UP LULLABY - ]
-        </span>
-        <span className="text-[#9FF3D3] bg-[#1B1B3A] px-3 py-1 border border-[#9FF3D3]/30 rounded-sm">
-          CARRIER FREQ: 261 - 784 Hz
+    <div className="relative w-full bg-[#B9A7FF] text-[#1B1B3A] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-b-4 border-[#1B1B3A] overflow-hidden">
+      {/* Pale Oversized Circle Arc */}
+      <div
+        className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full border-[42px] border-white/25 pointer-events-none"
+        aria-hidden="true"
+      />
+
+      {/* Huge Ghosted Word Behind Character */}
+      <div
+        className="absolute inset-0 flex items-center justify-center select-none pointer-events-none overflow-hidden"
+        aria-hidden="true"
+      >
+        <span className="font-display text-[24vw] leading-none text-white/35 tracking-widest font-extrabold">
+          MELODY
         </span>
       </div>
 
-      <div className="grid md:grid-cols-12 gap-6 items-center">
-        {/* Left Column: Description & Player Controls */}
-        <div className="md:col-span-7 space-y-4">
-          <h3 className="font-display text-4xl sm:text-5xl text-[#B9A7FF] tracking-wide leading-none">
-            GENTLE MODEM CHIRPS & STATIC STRINGS
-          </h3>
-          <p className="font-body text-sm sm:text-base text-[#FFF8EE]/85 leading-relaxed">
-            When everyone fell asleep, the old telephone wires hummed softly. Pinglet sings a gentle pentatonic lullaby woven from 56k handshake sine blips and soft CRT phosphor warmth. Never harsh, pure procedural Web Audio API blips.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              onClick={togglePlayback}
-              className={`px-5 py-3 rounded-xl font-display text-xl sm:text-2xl tracking-wider shadow-lg flex items-center gap-2 cursor-pointer transition-all transform hover:scale-105 active:scale-95 ${
-                isPlaying
-                  ? 'bg-[#FFB088] text-[#1B1B3A]'
-                  : 'bg-[#9FF3D3] text-[#1B1B3A]'
-              }`}
-              aria-label={isPlaying ? 'Pause Dial-Up Lullaby' : 'Play Dial-Up Lullaby'}
-            >
-              {isPlaying ? (
-                <>
-                  <Pause className="w-5 h-5 fill-current" /> PAUSE LULLABY
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5 fill-current" /> PLAY LULLABY
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={onToggleMute}
-              className={`px-4 py-3 rounded-xl font-mono-retro text-xs uppercase tracking-wider border cursor-pointer transition-all flex items-center gap-2 ${
-                isMuted
-                  ? 'bg-red-500/20 text-red-300 border-red-400/40'
-                  : 'bg-white/10 text-[#9FF3D3] border-white/20 hover:bg-white/15'
-              }`}
-              aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              {isMuted ? 'MUTED' : 'AUDIO ON'}
-            </button>
-
-            <button
-              onClick={() => audioSystem.playHandshakeEasterEgg()}
-              className="px-4 py-3 rounded-xl font-mono-retro text-xs uppercase tracking-wider bg-[#26264d] hover:bg-[#323264] text-[#B9A7FF] border border-[#B9A7FF]/40 cursor-pointer transition-all flex items-center gap-1.5"
-              title="Play retro 3:00 AM dial-up handshake sound"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> 3AM HANDSHAKE CHIRP
-            </button>
-          </div>
+      <div className="relative z-10 max-w-6xl mx-auto">
+        {/* Tiny Corner Mood Tag with Dash Mark */}
+        <div className="flex items-center justify-between gap-2 mb-6 text-xs font-mono-retro font-bold uppercase tracking-widest">
+          <span className="px-3.5 py-1.5 rounded-full bg-[#1B1B3A] text-[#FFF0B3]">
+            &mdash; WORK 01 : MUSIC BOX
+          </span>
         </div>
 
-        {/* Right Column: Interactive Pentatonic Organ Keys */}
-        <div className="md:col-span-5 bg-[#12122b] p-4 rounded-2xl border border-white/10">
-          <div className="flex items-center justify-between mb-3 text-xs font-mono-retro text-[#9FF3D3]">
-            <span>PENTATONIC CRT KEYS</span>
-            <span className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-[#9FF3D3] animate-ping' : 'bg-white/30'}`} />
-              {isPlaying ? 'ACTIVE' : 'TOUCH TO PLAY'}
-            </span>
+        <div className="grid lg:grid-cols-12 gap-8 items-center">
+          {/* Left: Glossy 3D Music Box Render with Pinglet */}
+          <div className="lg:col-span-6 flex flex-col items-center">
+            <div className="relative w-full max-w-[380px] bg-gradient-to-b from-[#FFF8EE] to-[#FFC9A8] rounded-[2.5rem] p-5 border-4 border-[#1B1B3A] toy-panel-shadow flex flex-col items-center">
+              <div className="w-full max-w-[270px] animate-toy-float">
+                <PingletSvg
+                  mood={isPlaying ? 'excited' : 'sleepy'}
+                  size={270}
+                  showBackdrop={false}
+                  className="w-full h-auto"
+                  alt="Pinglet perched atop a pastel designer-toy wind-up music box"
+                />
+              </div>
+
+              {/* 3D Pastel Music Box Base Pedestal */}
+              <div className="w-full bg-gradient-to-r from-[#E86FA0] via-[#FFC9A8] to-[#FFF0B3] rounded-2xl p-4 border-3 border-[#1B1B3A] toy-card-gloss flex items-center justify-between gap-3 -mt-4 relative z-10">
+                <div className="flex items-center gap-2">
+                  <Music className={`w-6 h-6 text-[#1B1B3A] ${isPlaying ? 'animate-bounce' : ''}`} />
+                  <span className="font-rounded font-bold text-sm sm:text-base text-[#1B1B3A]">
+                    {isPlaying ? 'Playing Note: ' + (activeNote || '♪') : '56k Chime Box'}
+                  </span>
+                </div>
+
+                {/* Golden Wind-Up Key Visual */}
+                <button
+                  type="button"
+                  onClick={togglePlayback}
+                  className="min-h-[44px] px-4 py-1.5 rounded-full bg-[#FFF0B3] border-2 border-[#1B1B3A] font-mono-retro font-bold text-xs text-[#1B1B3A] shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                  aria-label={isPlaying ? 'Stop winding music box' : 'Wind music box key'}
+                >
+                  {isPlaying ? '⟳ WINDING' : '🔑 WIND KEY'}
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Interactive Keyboard */}
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-            {(Object.keys(PENTATONIC_SCALE) as Array<keyof typeof PENTATONIC_SCALE>).map(
-              (noteKey) => {
-                const isCurrent = activeNote === noteKey;
-                return (
-                  <button
-                    key={noteKey}
-                    onClick={() => handleManualKeyClick(noteKey)}
-                    className={`h-24 sm:h-28 rounded-lg flex flex-col justify-end p-2 transition-all cursor-pointer border ${
-                      isCurrent
-                        ? 'bg-[#9FF3D3] text-[#1B1B3A] border-[#FFF8EE] shadow-[0_0_15px_#9FF3D3] scale-95'
-                        : 'bg-[#222247] hover:bg-[#2e2e5c] text-[#FFF8EE] border-white/10'
-                    }`}
-                    aria-label={`Play note ${noteKey}`}
-                  >
-                    <span className="text-[10px] font-mono-retro opacity-70">
-                      {Math.round(PENTATONIC_SCALE[noteKey])}Hz
-                    </span>
-                    <span className="font-display text-lg sm:text-xl font-bold">{noteKey}</span>
-                  </button>
-                );
-              }
-            )}
-          </div>
+          {/* Right: Giant Stacked Heading (2 words), Caption (<15 words), & Pentatonic Keys */}
+          <div className="lg:col-span-6 text-center lg:text-left space-y-5">
+            <h2 className="font-display text-6xl sm:text-8xl tracking-tight leading-[0.88] uppercase">
+              DIAL-UP LULLABY
+            </h2>
 
-          <p className="text-[11px] font-mono-retro text-[#FFF8EE]/60 mt-3 text-center">
-            Tap any key above to chime in with Pinglet!
-          </p>
+            <p className="font-rounded font-semibold text-xl sm:text-2xl max-w-md mx-auto lg:mx-0 leading-snug">
+              Wind the glossy music box to hear a soft pentatonic modem melody.
+            </p>
+
+            {/* Primary Music Box Controls (44px+ tap targets) */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+              <button
+                type="button"
+                onClick={togglePlayback}
+                className={`min-h-[48px] px-6 py-2.5 rounded-full font-rounded font-bold text-base uppercase tracking-wider border-3 border-[#1B1B3A] toy-button-gloss flex items-center gap-2 cursor-pointer transition-all ${
+                  isPlaying ? 'bg-[#FFF0B3] text-[#1B1B3A]' : 'bg-[#9FF3D3] text-[#1B1B3A]'
+                }`}
+              >
+                {isPlaying ? (
+                  <>
+                    <Pause className="w-5 h-5 fill-current" /> PAUSE BOX
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5 fill-current" /> PLAY LULLABY
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={onToggleMute}
+                className="min-h-[48px] px-5 py-2.5 rounded-full bg-[#FFF8EE] text-[#1B1B3A] font-rounded font-bold text-sm uppercase border-3 border-[#1B1B3A] flex items-center gap-2 cursor-pointer hover:bg-white transition-all"
+                aria-label={isMuted ? 'Unmute music box' : 'Mute music box'}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                <span>{isMuted ? 'MUTED' : 'AUDIO ON'}</span>
+              </button>
+            </div>
+
+            {/* Interactive Candy Chime Buttons */}
+            <div
+              className="grid grid-cols-5 sm:grid-cols-9 gap-2 pt-2"
+              role="group"
+              aria-label="Pentatonic music box keys"
+            >
+              {(Object.keys(PENTATONIC_SCALE) as Array<keyof typeof PENTATONIC_SCALE>).map(
+                (noteKey) => {
+                  const isCurrent = activeNote === noteKey;
+                  return (
+                    <button
+                      key={noteKey}
+                      type="button"
+                      onClick={() => handleManualKeyClick(noteKey)}
+                      className={`min-h-[52px] rounded-2xl border-2 border-[#1B1B3A] font-rounded font-bold text-sm flex flex-col items-center justify-center cursor-pointer transition-all ${
+                        isCurrent
+                          ? 'bg-[#FFF0B3] text-[#1B1B3A] scale-105 shadow-md'
+                          : 'bg-[#FFF8EE] hover:bg-white text-[#1B1B3A]'
+                      }`}
+                      aria-label={`Play pentatonic note ${noteKey}`}
+                    >
+                      <span>{noteKey}</span>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

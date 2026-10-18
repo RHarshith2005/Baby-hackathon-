@@ -2,49 +2,49 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   type Packet,
   type PingletMood,
-  isPacketCaught,
+  GAME_DURATION_SECONDS,
   calculateCatchScore,
   determineGameMood,
   createPacketData,
 } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
 import { PingletSvg } from './PingletSvg';
-import { Play, RotateCcw, Volume2, VolumeX, Sparkles, Trophy, Zap } from 'lucide-react';
+import { Play, RotateCcw } from 'lucide-react';
 
 interface CatchThePacketsProps {
   onMoodChange?: (mood: PingletMood) => void;
+  onIncrementHellos?: () => void;
   isMuted?: boolean;
 }
 
 export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
   onMoodChange,
-  isMuted = false,
+  onIncrementHellos,
 }) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playerX, setPlayerX] = useState<number>(50); // percentage (0 - 100)
+  const [timeLeft, setTimeLeft] = useState<number>(GAME_DURATION_SECONDS);
   const [score, setScore] = useState<number>(0);
   const [streak, setStreak] = useState<number>(0);
   const [bestScore, setBestScore] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      return Number(localStorage.getItem('pinglet_best_score') || 0);
+    try {
+      if (typeof window !== 'undefined') {
+        return Number(localStorage.getItem('pinglet_best_score') || 0);
+      }
+    } catch {
+      // Ignore storage errors
     }
     return 0;
   });
   const [packets, setPackets] = useState<Packet[]>([]);
-  const [mood, setMood] = useState<PingletMood>('shy');
-  const [missedCount, setMissedCount] = useState<number>(0);
+  const [mood, setMood] = useState<PingletMood>('excited');
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
-  const [lastCatchText, setLastCatchText] = useState<string | null>(null);
 
-  const gameAreaRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef<boolean>(false);
   const requestRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const packetIdCounterRef = useRef<number>(1);
   const timeElapsedRef = useRef<number>(0);
-  const nextSpawnTimerRef = useRef<number>(0.8);
+  const nextSpawnTimerRef = useRef<number>(0.4);
 
-  // Sync mood to parent
   useEffect(() => {
     if (onMoodChange) {
       onMoodChange(mood);
@@ -54,63 +54,48 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
   const startGame = useCallback(() => {
     setIsPlaying(true);
     setIsGameOver(false);
+    setTimeLeft(GAME_DURATION_SECONDS);
     setScore(0);
     setStreak(0);
-    setMissedCount(0);
-    setPackets([]);
-    setPlayerX(50);
-    setMood('shy');
-    setLastCatchText('READY! STEER PINGLET');
+    setMood('excited');
     packetIdCounterRef.current = 1;
     timeElapsedRef.current = 0;
-    nextSpawnTimerRef.current = 0.5;
+    nextSpawnTimerRef.current = 0.25;
     lastTimeRef.current = performance.now();
+    // Spawn 2 initial packets immediately
+    const initial: Packet[] = [
+      { ...createPacketData(11, packetIdCounterRef.current++, 0), y: 18 },
+      { ...createPacketData(47, packetIdCounterRef.current++, 0), y: 34 },
+    ];
+    setPackets(initial);
   }, []);
 
-  const resetGame = useCallback(() => {
-    setIsPlaying(false);
-    setIsGameOver(false);
-    setPackets([]);
-    setMood('shy');
-  }, []);
+  const handleTapPacket = (pkt: Packet) => {
+    if (!isPlaying || isGameOver) return;
+    audioSystem.playPacketCatch(pkt.type);
+    setPackets((prev) => prev.filter((item) => item.id !== pkt.id));
 
-  // Keyboard controls
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isPlaying || isGameOver) return;
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        setPlayerX((prev) => Math.max(10, prev - 7));
-      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        setPlayerX((prev) => Math.min(90, prev + 7));
+    const result = calculateCatchScore(score, streak, pkt.points);
+    const nextScore = result.score;
+    setScore(nextScore);
+    setStreak(result.streak);
+
+    if (nextScore > bestScore) {
+      setBestScore(nextScore);
+      try {
+        localStorage.setItem('pinglet_best_score', String(nextScore));
+      } catch {
+        // Ignore storage error
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, isGameOver]);
+    }
 
-  // Touch and pointer dragging
-  const updatePlayerPosFromPointer = (clientX: number) => {
-    if (!gameAreaRef.current) return;
-    const rect = gameAreaRef.current.getBoundingClientRect();
-    const pct = ((clientX - rect.left) / rect.width) * 100;
-    setPlayerX(Math.max(10, Math.min(90, pct)));
+    if (onIncrementHellos) {
+      onIncrementHellos();
+    }
+
+    setMood(determineGameMood(nextScore, result.streak, false));
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    isDraggingRef.current = true;
-    updatePlayerPosFromPointer(e.clientX);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
-    updatePlayerPosFromPointer(e.clientX);
-  };
-
-  const handlePointerUp = () => {
-    isDraggingRef.current = false;
-  };
-
-  // Main game tick
   useEffect(() => {
     if (!isPlaying || isGameOver) {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
@@ -118,15 +103,21 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
     }
 
     const gameLoop = (timestamp: number) => {
-      const dt = (timestamp - lastTimeRef.current) / 1000;
+      const dt = Math.min(0.1, (timestamp - lastTimeRef.current) / 1000);
       lastTimeRef.current = timestamp;
 
-      // Bound dt to prevent huge leaps if tab unfocused
-      const safeDt = Math.min(dt, 0.1);
-      timeElapsedRef.current += safeDt;
-      nextSpawnTimerRef.current -= safeDt;
+      timeElapsedRef.current += dt;
+      const remaining = Math.max(0, GAME_DURATION_SECONDS - timeElapsedRef.current);
+      setTimeLeft(Math.ceil(remaining));
 
-      // Spawn packets
+      if (remaining <= 0) {
+        setIsGameOver(true);
+        setIsPlaying(false);
+        setMood('sleepy');
+        return;
+      }
+
+      nextSpawnTimerRef.current -= dt;
       if (nextSpawnTimerRef.current <= 0) {
         const newPacket = createPacketData(
           Math.floor(Math.random() * 100),
@@ -134,76 +125,14 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
           timeElapsedRef.current
         );
         setPackets((prev) => [...prev, newPacket]);
-        // Dynamic spawn frequency
-        nextSpawnTimerRef.current = Math.max(0.65, 1.4 - timeElapsedRef.current * 0.015);
+        nextSpawnTimerRef.current = 0.55;
       }
 
-      // Update falling packets and check collisions
-      setPackets((prevPackets) => {
-        const nextList: Packet[] = [];
-        let scoreDelta = 0;
-        let streakDelta = 0;
-        let missedDelta = 0;
-        let caughtLabel = '';
-        let caughtType: Packet['type'] | null = null;
-
-        for (const pkt of prevPackets) {
-          const nextY = pkt.y + pkt.speed * safeDt;
-
-          // Check if caught in Pinglet's hitzone (y ~ 75-90)
-          if (isPacketCaught({ x: pkt.x, y: nextY }, playerX, 22, 75, 92)) {
-            const result = calculateCatchScore(score, streak, pkt.points);
-            scoreDelta += result.earned;
-            streakDelta = result.streak;
-            caughtLabel = `${pkt.points > 0 ? '+' : ''}${result.earned} (${pkt.label})`;
-            caughtType = pkt.type;
-            continue; // Packet is collected!
-          }
-
-          // Check if missed below screen
-          if (nextY > 105) {
-            if (pkt.type !== 'bitrot') {
-              missedDelta++;
-            }
-            continue; // Dropped off screen
-          }
-
-          nextList.push({ ...pkt, y: nextY });
-        }
-
-        // Apply catch effects
-        if (caughtType) {
-          audioSystem.playPacketCatch(caughtType);
-          setLastCatchText(caughtLabel);
-          setScore((s) => {
-            const newS = Math.max(0, s + scoreDelta);
-            if (newS > bestScore) {
-              setBestScore(newS);
-              localStorage.setItem('pinglet_best_score', String(newS));
-            }
-            return newS;
-          });
-          setStreak(streakDelta);
-          const nextMood = determineGameMood(score + scoreDelta, streakDelta, false);
-          setMood(nextMood);
-        }
-
-        // Apply misses
-        if (missedDelta > 0) {
-          setMissedCount((m) => {
-            const totalMissed = m + missedDelta;
-            if (totalMissed >= 5) {
-              setIsGameOver(true);
-              const endMood = determineGameMood(score, 0, true);
-              setMood(endMood);
-            }
-            return totalMissed;
-          });
-          setStreak(0);
-        }
-
-        return nextList;
-      });
+      setPackets((prevPackets) =>
+        prevPackets
+          .map((pkt) => ({ ...pkt, y: pkt.y + pkt.speed * dt }))
+          .filter((pkt) => pkt.y <= 98)
+      );
 
       requestRef.current = requestAnimationFrame(gameLoop);
     };
@@ -214,186 +143,148 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [isPlaying, isGameOver, playerX, score, streak, bestScore]);
+  }, [isPlaying, isGameOver]);
 
   return (
-    <div className="w-full bg-[#1B1B3A] text-[#FFF8EE] rounded-3xl p-4 sm:p-6 md:p-8 border-4 border-[#9FF3D3]/40 shadow-2xl relative overflow-hidden">
-      {/* Corner retro mood tag */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 text-xs font-mono-retro tracking-widest uppercase">
-        <span className="px-3 py-1 bg-[#9FF3D3] text-[#1B1B3A] font-bold rounded-sm flex items-center gap-1.5">
-          <Zap className="w-3.5 h-3.5" /> [ - MINI-GAME : 56K DISPATCH - ]
-        </span>
-        <span className="text-[#B9A7FF] bg-[#1B1B3A]/80 px-3 py-1 border border-[#B9A7FF]/30 rounded-sm">
-          CARRIER: 100% CRT PHOSPHOR
-        </span>
-      </div>
-
-      {/* Header and stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4">
-        <div className="bg-[#26264d] p-3 rounded-xl border border-white/10 text-center">
-          <span className="text-[11px] font-mono-retro text-[#9FF3D3] uppercase block">Score</span>
-          <span className="font-display text-3xl sm:text-4xl text-[#FFF8EE]">{score}</span>
-        </div>
-        <div className="bg-[#26264d] p-3 rounded-xl border border-white/10 text-center">
-          <span className="text-[11px] font-mono-retro text-[#FFB088] uppercase block">Streak</span>
-          <span className="font-display text-3xl sm:text-4xl text-[#FFB088]">
-            {streak > 1 ? `${streak}x` : streak}
-          </span>
-        </div>
-        <div className="bg-[#26264d] p-3 rounded-xl border border-white/10 text-center">
-          <span className="text-[11px] font-mono-retro text-[#B9A7FF] uppercase block">Pinglet Mood</span>
-          <span className="font-mono-retro font-bold text-lg sm:text-xl text-[#B9A7FF] capitalize">
-            {mood}
-          </span>
-        </div>
-        <div className="bg-[#26264d] p-3 rounded-xl border border-white/10 text-center">
-          <span className="text-[11px] font-mono-retro text-red-300 uppercase block">Lost Packets</span>
-          <span className="font-display text-3xl sm:text-4xl text-red-300">
-            {missedCount}/5
-          </span>
-        </div>
-      </div>
-
-      {/* Playfield Area */}
+    <div className="relative w-full bg-[#9FF3D3] text-[#1B1B3A] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-b-4 border-[#1B1B3A] overflow-hidden">
+      {/* Pale Oversized Circle Arc */}
       <div
-        ref={gameAreaRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        className="relative w-full h-[360px] sm:h-[420px] bg-gradient-to-b from-[#12122b] to-[#1e1e40] rounded-2xl border-2 border-dashed border-[#B9A7FF]/40 overflow-hidden select-none touch-none cursor-ew-resize"
-        role="region"
-        aria-label="Catch the Packets game board"
+        className="absolute -bottom-32 -left-32 w-[440px] h-[440px] rounded-full border-[44px] border-white/30 pointer-events-none"
+        aria-hidden="true"
+      />
+
+      {/* Huge Ghosted Word Behind Character */}
+      <div
+        className="absolute inset-0 flex items-center justify-center select-none pointer-events-none overflow-hidden"
+        aria-hidden="true"
       >
-        {/* Retro Grid Background */}
-        <div
-          className="absolute inset-0 opacity-15 pointer-events-none"
-          style={{
-            backgroundImage: `linear-gradient(#9FF3D3 1px, transparent 1px), linear-gradient(90deg, #9FF3D3 1px, transparent 1px)`,
-            backgroundSize: '32px 32px',
-          }}
-        />
-
-        {/* Catch lane line */}
-        <div className="absolute top-[82%] left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#9FF3D3]/40 to-transparent pointer-events-none" />
-
-        {/* Falling Packets */}
-        {packets.map((pkt) => (
-          <div
-            key={pkt.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none transition-transform duration-75"
-            style={{
-              left: `${pkt.x}%`,
-              top: `${pkt.y}%`,
-            }}
-          >
-            <div
-              className="px-2.5 py-1 rounded text-xs font-mono-retro font-bold border shadow-lg flex items-center gap-1"
-              style={{
-                backgroundColor: pkt.type === 'bitrot' ? '#5a1212' : '#1B1B3A',
-                color: pkt.glowColor,
-                borderColor: pkt.glowColor,
-                boxShadow: `0 0 12px ${pkt.glowColor}66`,
-              }}
-            >
-              {pkt.type === 'sparkle' ? '★' : pkt.type === 'bitrot' ? '⚠' : '✉'} {pkt.label}
-            </div>
-            <div
-              className="w-2.5 h-2.5 rounded-full mt-0.5 animate-ping opacity-75"
-              style={{ backgroundColor: pkt.glowColor }}
-            />
-          </div>
-        ))}
-
-        {/* Pinglet Player Character */}
-        <div
-          className="absolute top-[82%] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75 flex flex-col items-center"
-          style={{
-            left: `${playerX}%`,
-          }}
-        >
-          {/* Reaction bubble */}
-          {lastCatchText && (
-            <div className="absolute -top-10 px-2 py-0.5 bg-[#FFF8EE] text-[#1B1B3A] text-[11px] font-mono-retro font-bold rounded shadow-md whitespace-nowrap animate-bounce">
-              {lastCatchText}
-            </div>
-          )}
-
-          <div className="w-24 h-24 sm:w-28 sm:h-28 filter drop-shadow-[0_8px_16px_rgba(159,243,211,0.35)]">
-            <PingletSvg mood={mood} size={112} />
-          </div>
-
-          {/* Steer ring */}
-          <div className="w-20 h-3 rounded-full bg-[#9FF3D3]/20 border border-[#9FF3D3]/50 blur-[1px]" />
-        </div>
-
-        {/* Overlay: Game Start / Game Over */}
-        {!isPlaying && (
-          <div className="absolute inset-0 bg-[#1B1B3A]/85 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-10">
-            <div className="w-20 h-20 mb-3 animate-float">
-              <PingletSvg mood="shy" size={80} />
-            </div>
-            <h3 className="font-display text-4xl sm:text-5xl tracking-wide text-[#9FF3D3] mb-2">
-              CATCH THE PACKETS
-            </h3>
-            <p className="font-body text-sm sm:text-base text-[#FFF8EE]/90 max-w-sm mb-5 leading-relaxed">
-              Touch and drag Pinglet left and right (or use <kbd className="px-1.5 py-0.5 bg-white/10 rounded font-mono-retro text-xs">←</kbd> <kbd className="px-1.5 py-0.5 bg-white/10 rounded font-mono-retro text-xs">→</kbd> keys) to catch lost hellos!
-            </p>
-            <button
-              onClick={startGame}
-              className="px-6 py-3 bg-[#9FF3D3] hover:bg-[#86eec6] text-[#1B1B3A] font-display text-2xl tracking-wider rounded-xl shadow-lg transform hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Play className="w-6 h-6 fill-current" /> LAUNCH DISPATCH
-            </button>
-          </div>
-        )}
-
-        {isGameOver && (
-          <div className="absolute inset-0 bg-[#1B1B3A]/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-10 animate-fade-in">
-            <div className="w-20 h-20 mb-2">
-              <PingletSvg mood="sleepy" size={80} />
-            </div>
-            <span className="font-mono-retro text-xs text-[#B9A7FF] tracking-widest uppercase mb-1">
-              [ - ATTIC DISPATCH PAUSED - ]
-            </span>
-            <h3 className="font-display text-4xl sm:text-5xl text-[#FFB088] mb-1">
-              TIRED BABY GHOST
-            </h3>
-            <p className="font-body text-sm text-[#FFF8EE]/80 max-w-xs mb-4">
-              5 packets slipped through the copper wires! Pinglet is taking a cozy nap.
-            </p>
-            <div className="bg-[#26264d] px-5 py-3 rounded-xl border border-white/10 mb-5 flex items-center gap-6">
-              <div>
-                <span className="text-[11px] font-mono-retro text-[#9FF3D3] block uppercase">Final Score</span>
-                <span className="font-display text-3xl text-white">{score}</span>
-              </div>
-              <div className="h-8 w-px bg-white/20" />
-              <div>
-                <span className="text-[11px] font-mono-retro text-[#FFB088] block uppercase">Best Record</span>
-                <span className="font-display text-3xl text-[#FFB088]">{bestScore}</span>
-              </div>
-            </div>
-            <button
-              onClick={startGame}
-              className="px-6 py-3 bg-[#B9A7FF] hover:bg-[#a791ff] text-[#1B1B3A] font-display text-2xl tracking-wider rounded-xl shadow-lg transform hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <RotateCcw className="w-5 h-5" /> TRY AGAIN WITH A SMILE
-            </button>
-          </div>
-        )}
+        <span className="font-display text-[26vw] leading-none text-white/45 tracking-widest font-extrabold">
+          CATCH
+        </span>
       </div>
 
-      {/* Controls & instructions footer */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-retro text-[#FFF8EE]/70">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#9FF3D3] animate-ping" />
-          <span>DRAG OR TAP SCREEN TO STEER</span>
+      <div className="relative z-10 max-w-6xl mx-auto">
+        {/* Tiny Corner Mood Tag with Dash Mark */}
+        <div className="flex items-center justify-between gap-2 mb-6 text-xs font-mono-retro font-bold uppercase tracking-widest">
+          <span className="px-3.5 py-1.5 rounded-full bg-[#1B1B3A] text-[#9FF3D3]">
+            &mdash; WORK 02 : 20S TAP GAME
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[#9FF3D3]">✉ +10 HELLO</span>
-          <span className="text-[#B9A7FF]">✉ +25 PING</span>
-          <span className="text-[#FFB088]">★ +50 KISS</span>
-          <span className="text-red-400">⚠ -15 BITROT</span>
+
+        {/* Heading (3 words) + Fredoka Caption (<15 words) */}
+        <div className="text-center lg:text-left mb-6">
+          <h2 className="font-display text-6xl sm:text-8xl tracking-tight leading-[0.88] uppercase">
+            CATCH THE PACKETS
+          </h2>
+          <p className="font-rounded font-semibold text-xl sm:text-2xl mt-2">
+            Tap the falling candy envelopes for twenty seconds to deliver hellos!
+          </p>
+        </div>
+
+        {/* Game Arena Card */}
+        <div className="bg-[#1B1B3A] text-[#FFF8EE] rounded-[2.5rem] p-4 sm:p-6 border-4 border-[#1B1B3A] toy-panel-shadow">
+          {/* Scoreboard Bar */}
+          <div className="grid grid-cols-3 gap-3 mb-4 text-center">
+            <div className="bg-[#282854] rounded-2xl py-2.5 px-3 border-2 border-white/15">
+              <span className="text-[11px] font-mono-retro text-[#9FF3D3] uppercase block">
+                TIME LEFT
+              </span>
+              <span className="font-display text-3xl sm:text-4xl text-[#FFF0B3]">
+                {timeLeft}s
+              </span>
+            </div>
+            <div className="bg-[#282854] rounded-2xl py-2.5 px-3 border-2 border-white/15">
+              <span className="text-[11px] font-mono-retro text-[#FFC9A8] uppercase block">
+                SCORE
+              </span>
+              <span className="font-display text-3xl sm:text-4xl text-white">
+                {score}
+              </span>
+            </div>
+            <div className="bg-[#282854] rounded-2xl py-2.5 px-3 border-2 border-white/15">
+              <span className="text-[11px] font-mono-retro text-[#B9A7FF] uppercase block">
+                BEST
+              </span>
+              <span className="font-display text-3xl sm:text-4xl text-[#B9A7FF]">
+                {bestScore}
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Tap Playfield */}
+          <div
+            className="relative w-full h-[350px] sm:h-[400px] bg-gradient-to-b from-[#1F1A45] via-[#3B266B] to-[#E86FA0]/40 rounded-[2rem] border-3 border-[#B9A7FF]/40 overflow-hidden select-none"
+            role="region"
+            aria-label="Tap falling candy packets game board"
+          >
+            {/* Falling Tappable Candy Packets (Minimum 48px touch targets) */}
+            {packets.map((pkt) => (
+              <button
+                key={pkt.id}
+                type="button"
+                onClick={() => handleTapPacket(pkt)}
+                onPointerDown={() => handleTapPacket(pkt)}
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 min-h-[48px] min-w-[116px] px-4 py-2 rounded-full font-rounded font-bold text-xs sm:text-sm text-[#1B1B3A] border-3 border-[#1B1B3A] shadow-lg flex items-center justify-center gap-1.5 cursor-pointer active:scale-90 transition-transform"
+                style={{
+                  left: `${pkt.x}%`,
+                  top: `${pkt.y}%`,
+                  backgroundColor: pkt.glowColor,
+                }}
+                aria-label={`Tap packet ${pkt.label} for ${pkt.points} points`}
+              >
+                <span>🍬</span>
+                <span>{pkt.label}</span>
+                <span>+{pkt.points}</span>
+              </button>
+            ))}
+
+            {/* Pinglet Cheering at Bottom Center */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-28 sm:w-32 sm:h-32 pointer-events-none">
+              <PingletSvg
+                mood={mood}
+                size={128}
+                showBackdrop={false}
+                interactiveTilt={false}
+                className="w-full h-auto"
+                alt="Pinglet cheering as packets are tapped"
+              />
+            </div>
+
+            {/* Start / Replay Overlay */}
+            {(!isPlaying || isGameOver) && (
+              <div className="absolute inset-0 bg-[#1B1B3A]/90 flex flex-col items-center justify-center p-6 text-center z-20">
+                <div className="w-28 h-28 mb-2 animate-toy-float">
+                  <PingletSvg
+                    mood={isGameOver ? 'excited' : 'shy'}
+                    size={112}
+                    showBackdrop={false}
+                    className="w-full h-auto"
+                    alt="Pinglet ready to play Catch the Packets"
+                  />
+                </div>
+
+                <h3 className="font-display text-4xl sm:text-5xl text-[#FFF0B3] tracking-wide uppercase mb-3">
+                  {isGameOver ? `SCORE: ${score} PTS!` : '20-SECOND PACKET RUSH'}
+                </h3>
+
+                <button
+                  type="button"
+                  onClick={startGame}
+                  className="min-h-[52px] px-8 py-3 bg-[#9FF3D3] hover:bg-[#88efd0] text-[#1B1B3A] font-rounded font-bold text-lg uppercase rounded-full border-3 border-[#1B1B3A] toy-button-gloss flex items-center gap-2 cursor-pointer"
+                >
+                  {isGameOver ? (
+                    <>
+                      <RotateCcw className="w-5 h-5" /> PLAY AGAIN (20S)
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5 fill-current" /> START 20S GAME
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

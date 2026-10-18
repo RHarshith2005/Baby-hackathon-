@@ -1,178 +1,126 @@
 import React from 'react';
 import { PingletSvg } from './PingletSvg';
-import { ShieldCheck, Cpu, Radio, Sparkles, Feather, FileText, Bookmark } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export const CharacterSheet: React.FC = () => {
+  const fields = [
+    {
+      label: 'NAME',
+      value: 'Pinglet · Series 01 (#0404)',
+      pillBg: 'bg-[#9FF3D3]',
+    },
+    {
+      label: 'WHAT THEY ARE',
+      value: 'Mint-lavender jelly-resin baby ghost with glitter and gumdrop antennae.',
+      pillBg: 'bg-[#B9A7FF]',
+    },
+    {
+      label: 'WHAT THEY DO',
+      value: 'Junior Packet Courier hand-delivering lost messages and unsent hellos.',
+      pillBg: 'bg-[#FFC9A8]',
+    },
+    {
+      label: 'THEIR STORY',
+      value: 'Born at 3 a.m. when an attic dial-up modem sang.',
+      pillBg: 'bg-[#FFF0B3]',
+    },
+    {
+      label: 'TAGLINE',
+      value: '“I carry little hellos across the wires.”',
+      pillBg: 'bg-[#E86FA0] text-white',
+    },
+  ];
+
   return (
     <section
-      id="character"
-      className="relative w-full bg-[#FFF8EE] text-[#1B1B3A] p-4 sm:p-8 md:p-12 lg:p-16 border-t-4 border-b-4 border-[#1B1B3A] overflow-hidden"
+      id="meet"
+      aria-label="Meet Pinglet Blind-Box Card"
+      className="relative w-full bg-[#FFF8EE] text-[#1B1B3A] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-b-4 border-[#1B1B3A] overflow-hidden"
     >
-      {/* Ghosted background word */}
+      {/* Pale Oversized Circle Arcs */}
+      <div
+        className="absolute -top-28 -right-28 w-96 h-96 rounded-full border-[40px] border-[#9FF3D3]/35 pointer-events-none"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -bottom-28 -left-28 w-96 h-96 rounded-full border-[40px] border-[#B9A7FF]/30 pointer-events-none"
+        aria-hidden="true"
+      />
+
+      {/* Huge Ghosted Word Behind Character */}
       <div
         className="absolute inset-0 flex items-center justify-center select-none pointer-events-none overflow-hidden"
         aria-hidden="true"
       >
-        <span className="font-display text-[20vw] leading-none text-[#1B1B3A]/5 tracking-wider font-extrabold">
-          DOSSIER
+        <span className="font-display text-[26vw] leading-none text-[#1B1B3A]/[0.06] tracking-wider font-extrabold">
+          UNBOX
         </span>
       </div>
 
-      {/* Pale circle arc background accent */}
-      <div className="absolute top-1/4 -right-32 w-96 h-96 rounded-full border-[36px] border-[#9FF3D3]/30 pointer-events-none" />
-      <div className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full border-[28px] border-[#B9A7FF]/25 pointer-events-none" />
-
-      {/* Top Corner Mood Tag */}
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-retro font-bold uppercase tracking-widest mb-6">
-        <span className="px-3 py-1 bg-[#1B1B3A] text-[#FFF8EE] rounded-sm">
-          [ - ARCHIVE RECORD : 0404.DAT - ]
+      {/* Tiny Corner Mood Tag with Dash Mark */}
+      <div className="relative z-10 max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2 mb-6 text-xs font-mono-retro font-bold uppercase tracking-widest">
+        <span className="px-3.5 py-1.5 rounded-full bg-[#1B1B3A] text-[#FFF0B3]">
+          &mdash; BLIND BOX : SERIES 01
         </span>
-        <span className="px-3 py-1 bg-[#FFB088] text-[#1B1B3A] border border-[#1B1B3A] rounded-sm">
-          [ - CLEARANCE : COURIER LEVEL 1 - ]
+
+        {/* Retro-Web Touch #2: Under Construction Sticker */}
+        <span className="px-3.5 py-1.5 rounded-full bg-[#FFF0B3] text-[#1B1B3A] border-2 border-[#1B1B3A] shadow-sm flex items-center gap-1.5">
+          <span>🚧</span>
+          <span>UNDER CONSTRUCTION · 3:00 AM</span>
         </span>
       </div>
 
-      {/* Giant Heading */}
-      <div className="relative z-10 mb-8 sm:mb-12">
-        <span className="font-mono-retro text-xs sm:text-sm font-bold text-[#FFB088] tracking-widest uppercase block mb-1">
-          // FIELD MANUAL & REGISTRY
-        </span>
-        <h2 className="font-display text-6xl sm:text-7xl md:text-8xl tracking-tight text-[#1B1B3A] leading-none">
-          CHARACTER SHEET
+      {/* Section Heading (2 words) + Fredoka Caption (<15 words) */}
+      <div className="relative z-10 max-w-6xl mx-auto text-center lg:text-left mb-8">
+        <h2 className="font-display text-6xl sm:text-8xl tracking-tight uppercase leading-none">
+          MEET PINGLET
         </h2>
+        <p className="font-rounded font-medium text-lg sm:text-2xl text-[#1B1B3A]/85 mt-2">
+          Collectible blind-box figure cast in translucent glitter jelly resin.
+        </p>
       </div>
 
-      {/* Main Profile Card Layout */}
-      <div className="relative z-10 grid lg:grid-cols-12 gap-8 items-stretch">
-        {/* Left Card: Visual ID & Retro Seal */}
-        <div className="lg:col-span-5 bg-[#1B1B3A] text-[#FFF8EE] rounded-3xl p-6 sm:p-8 border-4 border-[#1B1B3A] shadow-2xl flex flex-col justify-between relative overflow-hidden">
-          {/* Top card header */}
-          <div>
-            <div className="flex items-center justify-between border-b border-white/20 pb-3 mb-6">
-              <span className="font-mono-retro text-xs text-[#9FF3D3] font-bold">
-                ATTIC PACKET POST // ID BADGE
-              </span>
-              <span className="px-2 py-0.5 bg-[#9FF3D3] text-[#1B1B3A] text-[10px] font-mono-retro font-bold rounded-xs">
-                OFFICIAL
-              </span>
-            </div>
-
-            {/* Visual Portrait */}
-            <div className="bg-[#26264d] rounded-2xl p-6 border-2 border-white/10 flex flex-col items-center justify-center relative mb-6">
-              {/* Retro photo corner clips */}
-              <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-[#9FF3D3]" />
-              <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-[#9FF3D3]" />
-              <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-[#9FF3D3]" />
-              <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-[#9FF3D3]" />
-
-              <div className="w-48 h-48 sm:w-56 sm:h-56">
-                <PingletSvg mood="shy" size={224} />
-              </div>
-
-              <span className="font-mono-retro text-xs text-[#9FF3D3] mt-2 font-bold tracking-wider">
-                SUBJECT: PINGLET (LIVE SPECIMEN)
-              </span>
-            </div>
+      {/* Collectible Blind-Box Packaging Card */}
+      <div className="relative z-10 max-w-6xl mx-auto bg-gradient-to-br from-[#FFC9A8] via-[#FFF0B3] to-[#9FF3D3] p-4 sm:p-8 rounded-[2.5rem] border-4 border-[#1B1B3A] toy-panel-shadow grid lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+        {/* Left: Glossy Blister Window with Pinglet Render */}
+        <div className="lg:col-span-5 bg-[#FFF8EE]/90 rounded-[2rem] p-4 sm:p-6 border-3 border-[#1B1B3A] toy-card-gloss flex flex-col items-center">
+          <div className="w-full flex items-center justify-between text-xs font-mono-retro font-bold text-[#1B1B3A] mb-2">
+            <span className="inline-flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-[#E86FA0]" /> RARITY: SECRET 1/144
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-[#9FF3D3] border border-[#1B1B3A]">
+              GLITTER EDITION
+            </span>
           </div>
 
-          {/* Under construction sticker */}
-          <div className="bg-[#FFB088] text-[#1B1B3A] p-3 rounded-xl border-2 border-[#1B1B3A] font-mono-retro text-xs font-bold flex items-center gap-3 shadow-md">
-            <div className="w-8 h-8 rounded-full bg-[#1B1B3A] text-[#FFB088] flex items-center justify-center shrink-0">
-              🚧
-            </div>
-            <div>
-              <span className="block uppercase tracking-wider text-[10px]">COURIER NOTICE</span>
-              <span>UNDER GENTLE RECONSTRUCTION SINCE 1999</span>
-            </div>
+          <div className="w-full max-w-[300px]">
+            <PingletSvg
+              mood="shy"
+              size={300}
+              className="w-full h-auto"
+              alt="Pinglet blind-box collectible figure peeking shyly behind a candy-wrapped envelope"
+            />
           </div>
         </div>
 
-        {/* Right Card: The 5 Requested Fields */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 md:p-10 border-4 border-[#1B1B3A] shadow-xl flex flex-col justify-between">
-          <div className="space-y-6">
-            {/* Field 1: Name */}
-            <div className="border-b-2 border-[#1B1B3A]/10 pb-4">
-              <span className="text-xs font-mono-retro font-bold text-[#B9A7FF] uppercase tracking-wider block mb-1">
-                01. NAME & CALLSIGN
+        {/* Right: 5-Point Character Sheet (Each field under 12 words) */}
+        <div className="lg:col-span-7 grid gap-3 sm:gap-3.5">
+          {fields.map((f) => (
+            <div
+              key={f.label}
+              className="bg-[#FFF8EE] rounded-2xl p-3.5 sm:p-4 border-3 border-[#1B1B3A] toy-card-gloss flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+            >
+              <span
+                className={`inline-flex items-center gap-1.5 self-start px-3 py-1 rounded-full font-mono-retro font-bold text-xs uppercase border-2 border-[#1B1B3A] shrink-0 ${f.pillBg}`}
+              >
+                <Sparkles className="w-3 h-3" />
+                {f.label}
               </span>
-              <div className="flex flex-wrap items-baseline gap-3">
-                <h3 className="font-display text-4xl sm:text-5xl text-[#1B1B3A]">
-                  PINGLET
-                </h3>
-                <span className="font-mono-retro text-xs font-bold px-2.5 py-1 bg-[#B9A7FF]/20 text-[#1B1B3A] rounded border border-[#B9A7FF]">
-                  PACKET ID: #0404-HELLO
-                </span>
-              </div>
-            </div>
-
-            {/* Field 2: What They Are */}
-            <div className="border-b-2 border-[#1B1B3A]/10 pb-4">
-              <span className="text-xs font-mono-retro font-bold text-[#9FF3D3] uppercase tracking-wider block mb-1">
-                02. WHAT THEY ARE
-              </span>
-              <p className="font-display text-2xl sm:text-3xl text-[#1B1B3A] tracking-wide mb-1">
-                BABY STATIC GHOST & CRT PHOSPHOR WISP
-              </p>
-              <p className="font-body text-sm text-[#1B1B3A]/80 leading-relaxed">
-                Translucent mint-to-lavender body cast in soft vinyl gloss, endowed with two tiny blinking LED antenna tufts that tune into old telephone line frequencies.
+              <p className="font-rounded font-bold text-base sm:text-lg text-[#1B1B3A] sm:text-right leading-snug">
+                {f.value}
               </p>
             </div>
-
-            {/* Field 3: What They Do */}
-            <div className="border-b-2 border-[#1B1B3A]/10 pb-4">
-              <span className="text-xs font-mono-retro font-bold text-[#FFB088] uppercase tracking-wider block mb-1">
-                03. WHAT THEY DO
-              </span>
-              <p className="font-display text-2xl sm:text-3xl text-[#1B1B3A] tracking-wide mb-1">
-                JUNIOR PACKET COURIER OF THE OLD WEB
-              </p>
-              <p className="font-body text-sm text-[#1B1B3A]/80 leading-relaxed">
-                Hand-delivers lost messages, unsent draft emails, forgotten AIM status whispers, and little hellos stranded inside copper wires and sleeping modems.
-              </p>
-            </div>
-
-            {/* Field 4: Their Story */}
-            <div className="border-b-2 border-[#1B1B3A]/10 pb-4">
-              <span className="text-xs font-mono-retro font-bold text-[#1B1B3A] uppercase tracking-wider block mb-1">
-                04. THEIR STORY (FIRST-PERSON ORIGIN)
-              </span>
-              <blockquote className="bg-[#FFF8EE] p-4 rounded-xl border-l-4 border-[#1B1B3A] font-body text-sm sm:text-base text-[#1B1B3A]/90 italic leading-relaxed">
-                &ldquo;I woke up at exactly 3:00 a.m. when a dial-up handshake echoed through a forgotten computer in a dusty attic. The sound was like a lullaby made of static. When I rubbed my eyes, two tiny antenna LEDs blinked on my head, and a pouch full of unsent drafts was waiting for me.&rdquo;
-              </blockquote>
-            </div>
-
-            {/* Field 5: Tagline */}
-            <div>
-              <span className="text-xs font-mono-retro font-bold text-[#FFB088] uppercase tracking-wider block mb-1">
-                05. OFFICIAL COURIER TAGLINE
-              </span>
-              <div className="p-4 bg-[#9FF3D3]/30 rounded-xl border-2 border-[#1B1B3A]">
-                <p className="font-display text-3xl sm:text-4xl text-[#1B1B3A] tracking-wide">
-                  &ldquo;I carry little hellos across the wires.&rdquo;
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Specifications Grid */}
-          <div className="mt-6 pt-4 border-t-2 border-[#1B1B3A]/10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono-retro">
-            <div className="bg-[#FFF8EE] p-2.5 rounded-lg border border-[#1B1B3A]/20">
-              <span className="text-[10px] text-[#1B1B3A]/60 block uppercase">Weight</span>
-              <span className="font-bold">0.002 Kilobytes</span>
-            </div>
-            <div className="bg-[#FFF8EE] p-2.5 rounded-lg border border-[#1B1B3A]/20">
-              <span className="text-[10px] text-[#1B1B3A]/60 block uppercase">Antennae</span>
-              <span className="font-bold">Dual 520nm LEDs</span>
-            </div>
-            <div className="bg-[#FFF8EE] p-2.5 rounded-lg border border-[#1B1B3A]/20">
-              <span className="text-[10px] text-[#1B1B3A]/60 block uppercase">Top Speed</span>
-              <span className="font-bold">56,000 bps</span>
-            </div>
-            <div className="bg-[#FFF8EE] p-2.5 rounded-lg border border-[#1B1B3A]/20">
-              <span className="text-[10px] text-[#1B1B3A]/60 block uppercase">Temperament</span>
-              <span className="font-bold">Never Scary</span>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>
