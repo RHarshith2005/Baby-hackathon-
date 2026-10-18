@@ -62,10 +62,13 @@ test('determineGameMood transitions correctly based on score and game state', ()
   assert.equal(determineGameMood(300, 10, true), 'sleepy');
 });
 
-test('createPacketData generates valid packet specs', () => {
+test('createPacketData generates valid packet specs and supports 4 lanes', () => {
   const p1 = createPacketData(3, 1, 0);
   assert.ok(p1.id.startsWith('pkt-'));
   assert.ok(p1.x >= 0 && p1.x <= 100);
   assert.ok(p1.speed > 0);
   assert.ok(['hello', 'ping', 'sparkle', 'bitrot'].includes(p1.type));
+
+  const pNarrow = createPacketData(0, 0, 0, true);
+  assert.ok([18, 38, 62, 82].includes(pNarrow.x));
 });

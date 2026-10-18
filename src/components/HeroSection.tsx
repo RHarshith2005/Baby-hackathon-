@@ -4,12 +4,15 @@ import type { PingletMood } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
 import { ArrowDown } from 'lucide-react';
 
+import { KineticTitle } from './KineticTitle';
+import { motion } from 'motion/react';
+
 interface HeroSectionProps {
   currentMood: PingletMood;
   onSelectMood: (mood: PingletMood) => void;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({
+export const HeroSection: React.FC<HeroSectionProps> = React.memo(({
   currentMood,
   onSelectMood,
 }) => {
@@ -19,7 +22,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     <section
       id="hero"
       aria-label="Pinglet Hero Showcase"
-      className={`relative w-full min-h-[90vh] px-4 sm:px-8 md:px-14 py-8 sm:py-12 flex flex-col justify-between overflow-hidden transition-colors duration-500 border-b-4 border-[#1B1B3A] ${
+      className={`relative w-full min-h-[90svh] px-4 sm:px-8 md:px-14 py-8 sm:py-12 flex flex-col justify-between overflow-hidden transition-colors duration-500 border-b-4 border-[#1B1B3A] ${
         isNight
           ? 'bg-gradient-to-b from-[#1B1B3A] via-[#2F245C] to-[#523B8A] text-[#FFF8EE]'
           : 'bg-dreamy-sunset text-[#1B1B3A]'
@@ -51,10 +54,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Tiny Corner Mood Tag with Dash Mark */}
       <div className="relative z-10 flex items-center justify-between gap-2 text-xs font-mono-retro font-bold uppercase tracking-widest">
-        <span className="px-3.5 py-1.5 rounded-full bg-[#1B1B3A] text-[#9FF3D3] shadow-sm">
+        <span className="px-3.5 py-2 rounded-full bg-[#1B1B3A] text-[#9FF3D3] shadow-sm">
           &mdash; MOOD : {currentMood.toUpperCase()}
         </span>
-        <span className="px-3.5 py-1.5 rounded-full bg-white/85 text-[#1B1B3A] border-2 border-[#1B1B3A]">
+        <span className="px-3.5 py-2 rounded-full bg-white/85 text-[#1B1B3A] border-2 border-[#1B1B3A]">
           &mdash; SERIES 01 · #0404
         </span>
       </div>
@@ -62,10 +65,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Center Designer-Toy Showcase */}
       <div className="relative z-10 max-w-6xl mx-auto w-full grid lg:grid-cols-12 gap-6 sm:gap-8 items-center my-4 sm:my-6">
         {/* Left: Giant Stacked Uppercase Heading + 1 Caption under 15 words */}
-        <div className="lg:col-span-6 text-center lg:text-left space-y-4">
-          <h1 className="font-display text-7xl sm:text-9xl lg:text-[9.5rem] leading-[0.86] tracking-tight uppercase drop-shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, x: -25 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="lg:col-span-6 text-center lg:text-left space-y-4"
+        >
+          <KineticTitle
+            as="h1"
+            className="font-display text-7xl sm:text-9xl lg:text-[9.5rem] leading-[0.86] tracking-tight uppercase drop-shadow-sm"
+          >
             PINGLET
-          </h1>
+          </KineticTitle>
 
           {/* One Caption Under 15 Words in Rounded Font (Fredoka) */}
           <p
@@ -76,7 +88,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             &ldquo;I carry little hellos across the wires.&rdquo;
           </p>
 
-          {/* 44px Accessible Mood Switcher Pills */}
+          {/* 48px Accessible Mood Switcher Buttons */}
           <div
             className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-2"
             role="group"
@@ -90,7 +102,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   onSelectMood(m);
                   audioSystem.playTone(m === 'excited' ? 587.33 : 440, 0.14, 'triangle');
                 }}
-                className={`min-h-[44px] px-4 py-2 rounded-full font-rounded font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-[#1B1B3A] cursor-pointer transition-all ${
+                className={`min-h-[48px] px-4 py-2 rounded-full font-rounded font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-[#1B1B3A] cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#1B1B3A] ${
                   currentMood === m
                     ? 'bg-[#1B1B3A] text-[#9FF3D3] scale-105 shadow-md'
                     : 'bg-white/90 text-[#1B1B3A] hover:bg-white'
@@ -100,10 +112,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Right: Big Floating Designer-Toy Render */}
-        <div className="lg:col-span-6 flex items-center justify-center transition-transform duration-500">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="lg:col-span-6 flex items-center justify-center transition-transform duration-500"
+        >
           <div className="w-full max-w-[360px] sm:max-w-[420px] animate-toy-float">
             <PingletSvg
               mood={currentMood}
@@ -112,14 +130,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               alt={`Pinglet designer-toy 3D render floating in ${currentMood} pose with glitter resin and candy envelope`}
             />
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Bottom Scroll Hint */}
+      {/* Bottom Scroll Hint (≥48px touch target) */}
       <div className="relative z-10 flex items-center justify-center pt-2">
         <a
           href="#meet"
-          className="min-h-[44px] px-5 py-2 rounded-full bg-[#1B1B3A] text-[#FFF0B3] font-rounded font-bold text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 shadow-md hover:scale-105 transition-transform"
+          className="min-h-[48px] px-6 py-2.5 rounded-full bg-[#1B1B3A] text-[#FFF0B3] font-rounded font-bold text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 shadow-md hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-[#FFF0B3]"
         >
           <span>SCROLL TO UNBOX</span>
           <ArrowDown className="w-4 h-4 animate-bounce" />
@@ -127,4 +145,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       </div>
     </section>
   );
-};
+});
+
+HeroSection.displayName = 'HeroSection';

@@ -3,13 +3,15 @@ import { PingletSvg } from './PingletSvg';
 import type { PingletMood } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
 import { Sparkles, Check } from 'lucide-react';
+import { KineticTitle } from './KineticTitle';
+import { motion } from 'motion/react';
 
 interface MoodsSectionProps {
   currentMood: PingletMood;
   onSelectMood: (mood: PingletMood) => void;
 }
 
-export const MoodsSection: React.FC<MoodsSectionProps> = ({
+export const MoodsSection: React.FC<MoodsSectionProps> = React.memo(({
   currentMood,
   onSelectMood,
 }) => {
@@ -71,7 +73,7 @@ export const MoodsSection: React.FC<MoodsSectionProps> = ({
   ];
 
   return (
-    <section id="moods" aria-label="Pinglet Moods Showcase" className="w-full">
+    <section id="moods" aria-label="Pinglet Moods Showcase" className="w-full scroll-mt-24 sm:scroll-mt-28">
       {moodPanels.map((p) => {
         const isCurrent = currentMood === p.id;
         return (
@@ -109,8 +111,14 @@ export const MoodsSection: React.FC<MoodsSectionProps> = ({
                 </span>
               </div>
 
-              {/* Alternating Left / Right Grid */}
-              <div className="grid md:grid-cols-12 gap-6 sm:gap-10 items-center">
+              {/* Alternating Left / Right Grid with Motion Stagger */}
+              <motion.div
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="grid md:grid-cols-12 gap-6 sm:gap-10 items-center"
+              >
                 {/* Big Pinglet Render */}
                 <div
                   className={`md:col-span-6 flex items-center justify-center ${
@@ -133,9 +141,12 @@ export const MoodsSection: React.FC<MoodsSectionProps> = ({
                     p.isRightAligned ? 'md:order-1' : 'md:order-2'
                   }`}
                 >
-                  <h2 className="font-display text-6xl sm:text-8xl md:text-9xl tracking-tight leading-[0.88] uppercase">
+                  <KineticTitle
+                    as="h2"
+                    className="font-display text-6xl sm:text-8xl md:text-9xl tracking-tight leading-[0.88] uppercase"
+                  >
                     {p.heading}
-                  </h2>
+                  </KineticTitle>
 
                   <p className="font-rounded font-semibold text-xl sm:text-2xl max-w-md mx-auto md:mx-0 leading-snug opacity-95">
                     {p.caption}
@@ -152,7 +163,7 @@ export const MoodsSection: React.FC<MoodsSectionProps> = ({
                           'triangle'
                         );
                       }}
-                      className={`min-h-[48px] px-6 py-2.5 rounded-full font-rounded font-bold text-sm sm:text-base uppercase tracking-wider border-3 border-[#1B1B3A] toy-button-gloss inline-flex items-center gap-2 cursor-pointer transition-all ${
+                      className={`min-h-[48px] px-6 py-2.5 rounded-full font-rounded font-bold text-sm sm:text-base uppercase tracking-wider border-3 border-[#1B1B3A] toy-button-gloss inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#1B1B3A] ${
                         isCurrent
                           ? 'bg-[#FFF0B3] text-[#1B1B3A]'
                           : 'bg-white text-[#1B1B3A] hover:bg-[#FFF8EE]'
@@ -170,11 +181,13 @@ export const MoodsSection: React.FC<MoodsSectionProps> = ({
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         );
       })}
     </section>
   );
-};
+});
+
+MoodsSection.displayName = 'MoodsSection';

@@ -18,7 +18,7 @@ interface CatchThePacketsProps {
   onRoundComplete?: (finalScore: number, clientX?: number, clientY?: number) => void;
 }
 
-export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
+const CatchThePacketsComponent: React.FC<CatchThePacketsProps> = ({
   onMoodChange,
   onIncrementHellos,
   onRoundComplete,
@@ -47,13 +47,10 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
   const timeElapsedRef = useRef<number>(0);
   const nextSpawnTimerRef = useRef<number>(0.4);
   const scoreRef = useRef<number>(0);
+  const streakRef = useRef<number>(0);
+  const caughtIdsRef = useRef<Set<string>>(new Set());
+  const previousMoodRef = useRef<PingletMood | null>(null);
   const playfieldRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (onMoodChange) {
-      onMoodChange(mood);
-    }
-  }, [mood, onMoodChange]);
 
   const startGame = useCallback(() => {
     setIsPlaying(true);
@@ -62,34 +59,47 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
     setScore(0);
     scoreRef.current = 0;
     setStreak(0);
+    streakRef.current = 0;
+    caughtIdsRef.current.clear();
     setMood('excited');
+    if (!previousMoodRef.current) {
+      previousMoodRef.current = 'excited';
+    }
+    if (onMoodChange) {
+      onMoodChange('excited');
+    }
     packetIdCounterRef.current = 1;
     timeElapsedRef.current = 0;
     nextSpawnTimerRef.current = 0.25;
     lastTimeRef.current = performance.now();
+    
+    const isNarrow = typeof window !== 'undefined' && window.innerWidth < 480;
     // Spawn 2 initial packets immediately
     const initial: Packet[] = [
-      { ...createPacketData(11, packetIdCounterRef.current++, 0), y: 18 },
-      { ...createPacketData(47, packetIdCounterRef.current++, 0), y: 34 },
+      { ...createPacketData(11, packetIdCounterRef.current++, 0, isNarrow), y: 18 },
+      { ...createPacketData(47, packetIdCounterRef.current++, 0, isNarrow), y: 34 },
     ];
     setPackets(initial);
-  }, []);
+  }, [onMoodChange]);
 
-  const handleTapPacket = (pkt: Packet) => {
+  const handleTapPacket = useCallback((pkt: Packet) => {
     if (!isPlaying || isGameOver) return;
+    if (caughtIdsRef.current.has(pkt.id)) return;
+    caughtIdsRef.current.add(pkt.id);
+
     audioSystem.playPacketCatch(pkt.type);
     setPackets((prev) => prev.filter((item) => item.id !== pkt.id));
 
-    const result = calculateCatchScore(score, streak, pkt.points);
-    const nextScore = result.score;
-    scoreRef.current = nextScore;
-    setScore(nextScore);
+    const result = calculateCatchScore(scoreRef.current, streakRef.current, pkt.points);
+    scoreRef.current = result.score;
+    streakRef.current = result.streak;
+    setScore(result.score);
     setStreak(result.streak);
 
-    if (nextScore > bestScore) {
-      setBestScore(nextScore);
+    if (result.score > bestScore) {
+      setBestScore(result.score);
       try {
-        localStorage.setItem('pinglet_best_score', String(nextScore));
+        localStorage.setItem('pinglet_best_score', String(result.score));
       } catch {
         // Ignore storage error
       }
@@ -99,8 +109,12 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
       onIncrementHellos();
     }
 
-    setMood(determineGameMood(nextScore, result.streak, false));
-  };
+    const nextMood = determineGameMood(result.score, result.streak, false);
+    setMood(nextMood);
+    if (nextMood === 'glitchy' && onMoodChange) {
+      onMoodChange('glitchy');
+    }
+  }, [isPlaying, isGameOver, bestScore, onIncrementHellos, onMoodChange]);
 
   useEffect(() => {
     if (!isPlaying || isGameOver) {
@@ -121,6 +135,10 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
         setIsPlaying(false);
         const finalScore = scoreRef.current;
         setMood(finalScore > 0 ? 'excited' : 'sleepy');
+        // Restore global mood
+        if (onMoodChange && previousMoodRef.current) {
+          onMoodChange(previousMoodRef.current);
+        }
         if (onRoundComplete) {
           if (playfieldRef.current) {
             const rect = playfieldRef.current.getBoundingClientRect();
@@ -134,10 +152,12 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
 
       nextSpawnTimerRef.current -= dt;
       if (nextSpawnTimerRef.current <= 0) {
+        const isNarrow = typeof window !== 'undefined' && window.innerWidth < 480;
         const newPacket = createPacketData(
           Math.floor(Math.random() * 100),
           packetIdCounterRef.current++,
-          timeElapsedRef.current
+          timeElapsedRef.current,
+          isNarrow
         );
         setPackets((prev) => [...prev, newPacket]);
         nextSpawnTimerRef.current = 0.55;
@@ -158,7 +178,7 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [isPlaying, isGameOver]);
+  }, [isPlaying, isGameOver, onMoodChange, onRoundComplete]);
 
   return (
     <div className="relative w-full bg-[#9FF3D3] text-[#1B1B3A] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-b-4 border-[#1B1B3A] overflow-hidden">
@@ -233,14 +253,19 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
             role="region"
             aria-label="Tap falling candy packets game board"
           >
-            {/* Falling Tappable Candy Packets (Minimum 48px touch targets) */}
+            {/* Falling Tappable Candy Packets (Minimum 48px touch targets, non-clipping at 360px) */}
             {packets.map((pkt) => (
               <button
                 key={pkt.id}
                 type="button"
-                onClick={() => handleTapPacket(pkt)}
                 onPointerDown={() => handleTapPacket(pkt)}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 min-h-[48px] min-w-[116px] px-4 py-2 rounded-full font-rounded font-bold text-xs sm:text-sm text-[#1B1B3A] border-3 border-[#1B1B3A] shadow-lg flex items-center justify-center gap-1.5 cursor-pointer active:scale-90 transition-transform"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleTapPacket(pkt);
+                  }
+                }}
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 min-h-[48px] min-w-[84px] sm:min-w-[110px] px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full font-rounded font-bold text-[11px] sm:text-xs text-[#1B1B3A] border-2 sm:border-3 border-[#1B1B3A] shadow-lg flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer active:scale-90 transition-transform focus:outline-none focus:ring-2 focus:ring-white"
                 style={{
                   left: `${pkt.x}%`,
                   top: `${pkt.y}%`,
@@ -326,3 +351,5 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
     </div>
   );
 };
+
+export const CatchThePackets = React.memo(CatchThePacketsComponent);

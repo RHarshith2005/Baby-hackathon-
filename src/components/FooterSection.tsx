@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { formatOdometerDigits } from '../game/packetRules';
+import { subscribeHellos, getHellosSnapshot } from '../utils/hellosStore';
 
-interface FooterSectionProps {
-  hellosDelivered: number;
-  onTriggerEasterEgg: () => void;
-}
-
-export const FooterSection: React.FC<FooterSectionProps> = ({
-  hellosDelivered,
-  onTriggerEasterEgg,
-}) => {
+export const FooterSection: React.FC = React.memo(() => {
+  const hellosDelivered = useSyncExternalStore(subscribeHellos, getHellosSnapshot, () => 4042);
   const digits = formatOdometerDigits(hellosDelivered, 6);
+
+  const handleScrollToWishWall = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const wishWallEl = document.getElementById('wish-wall') || document.getElementById('work');
+    if (wishWallEl) {
+      wishWallEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <footer className="w-full bg-[#1B1B3A] text-[#FFF8EE] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-t-4 border-[#1B1B3A] relative overflow-hidden">
@@ -45,15 +47,15 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
           </p>
         </div>
 
-        {/* Secret Hug Trigger Button (44px+ touch target) */}
+        {/* Normal "Send a hello" Button (Scrolls to Wish Wall) */}
         <div>
-          <button
-            type="button"
-            onClick={onTriggerEasterEgg}
-            className="min-h-[48px] px-6 py-2.5 rounded-full bg-[#E86FA0] hover:bg-[#f07ead] text-[#1B1B3A] font-rounded font-bold text-sm sm:text-base uppercase tracking-wider border-3 border-white shadow-lg cursor-pointer transition-transform hover:scale-105"
+          <a
+            href="#wish-wall"
+            onClick={handleScrollToWishWall}
+            className="min-h-[48px] inline-flex items-center gap-2 px-8 py-3 rounded-full bg-[#9FF3D3] hover:bg-[#88efd0] text-[#1B1B3A] font-rounded font-bold text-sm sm:text-base uppercase tracking-wider border-3 border-[#1B1B3A] toy-button-gloss cursor-pointer transition-transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#9FF3D3]"
           >
-            💌 OPEN 3:00 A.M. DIAL-UP HUG
-          </button>
+            💌 SEND A HELLO
+          </a>
         </div>
 
         {/* Concise Credits */}
@@ -69,4 +71,6 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
       </div>
     </footer>
   );
-};
+});
+
+FooterSection.displayName = 'FooterSection';

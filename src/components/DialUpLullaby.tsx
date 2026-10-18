@@ -11,7 +11,7 @@ interface DialUpLullabyProps {
   onToggleMute: () => void;
 }
 
-export const DialUpLullaby: React.FC<DialUpLullabyProps> = ({
+export const DialUpLullaby: React.FC<DialUpLullabyProps> = React.memo(({
   isMuted,
   onToggleMute,
 }) => {
@@ -180,4 +180,6 @@ export const DialUpLullaby: React.FC<DialUpLullabyProps> = ({
       </div>
     </div>
   );
-};
+});
+
+DialUpLullaby.displayName = 'DialUpLullaby';

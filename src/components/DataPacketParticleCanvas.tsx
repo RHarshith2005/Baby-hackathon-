@@ -34,25 +34,36 @@ export const DataPacketParticleCanvas = forwardRef<DataPacketCanvasHandle, DataP
       return () => mq.removeEventListener('change', handler);
     }, []);
 
-    // Resize canvas to match display size and DPI
+    // Resize canvas to match display viewport and DPI
     const resizeCanvas = useCallback(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1440;
+      const height = typeof window !== 'undefined' ? window.innerHeight : 900;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.max(10, Math.floor(rect.width * dpr));
-      const height = Math.max(10, Math.floor(rect.height * dpr));
+      const pixelWidth = Math.max(10, Math.floor(width * dpr));
+      const pixelHeight = Math.max(10, Math.floor(height * dpr));
 
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
       }
     }, []);
 
     useEffect(() => {
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
-      return () => window.removeEventListener('resize', resizeCanvas);
+      const handleVisibilityChange = () => {
+        if (document.hidden && animIdRef.current) {
+          cancelAnimationFrame(animIdRef.current);
+          animIdRef.current = null;
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => {
+        window.removeEventListener('resize', resizeCanvas);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }, [resizeCanvas]);
 
     // Safe roundRect helper with arc fallback for all browser contexts
@@ -264,9 +275,8 @@ export const DataPacketParticleCanvas = forwardRef<DataPacketCanvasHandle, DataP
 
         resizeCanvas();
 
-        const rect = canvas.getBoundingClientRect();
-        const startX = originX !== undefined ? originX : rect.width / 2;
-        const startY = originY !== undefined ? originY : rect.height * 0.55;
+        const startX = originX !== undefined ? originX : (typeof window !== 'undefined' ? window.innerWidth / 2 : 720);
+        const startY = originY !== undefined ? originY : (typeof window !== 'undefined' ? window.innerHeight / 2 : 450);
 
         const effectiveCount = prefersReducedMotionRef.current
           ? Math.min(10, Math.floor(count * 0.3))
@@ -315,7 +325,7 @@ export const DataPacketParticleCanvas = forwardRef<DataPacketCanvasHandle, DataP
         role="presentation"
         aria-hidden="true"
         data-testid="data-packet-particle-canvas"
-        className={`pointer-events-none absolute inset-0 z-30 w-full h-full select-none ${className}`}
+        className={`pointer-events-none fixed inset-0 z-50 w-screen h-screen select-none ${className}`}
       />
     );
   }

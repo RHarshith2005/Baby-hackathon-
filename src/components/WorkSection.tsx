@@ -12,36 +12,26 @@ interface WorkSectionProps {
   onToggleMute: () => void;
 }
 
-export const WorkSection: React.FC<WorkSectionProps> = ({
+export const WorkSection: React.FC<WorkSectionProps> = React.memo(({
   onMoodChange,
   onIncrementHellos,
   isMuted,
   onToggleMute,
 }) => {
   const particleCanvasRef = useRef<DataPacketCanvasHandle>(null);
-  const containerRef = useRef<HTMLElement>(null);
 
   const handleRoundComplete = (_finalScore: number, clientX?: number, clientY?: number) => {
     if (!particleCanvasRef.current) return;
-
-    if (clientX !== undefined && clientY !== undefined && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const originX = clientX - rect.left;
-      const originY = clientY - rect.top;
-      particleCanvasRef.current.triggerBurst(originX, originY, 44);
-    } else {
-      particleCanvasRef.current.triggerBurst(undefined, undefined, 44);
-    }
+    particleCanvasRef.current.triggerBurst(clientX, clientY, 48);
   };
 
   return (
     <section
       id="work"
-      ref={containerRef}
       aria-label="Pinglet Interactive Work Panels"
-      className="relative w-full overflow-hidden"
+      className="relative w-full overflow-hidden scroll-mt-24 sm:scroll-mt-28"
     >
-      {/* Canvas-based particle system for data-packet bursts upon completing Catch the Packets round */}
+      {/* Fixed viewport canvas-based particle system for data-packet bursts */}
       <DataPacketParticleCanvas ref={particleCanvasRef} isMuted={isMuted} />
 
       {/* Work Panel 1: Dial-Up Lullaby */}
@@ -59,4 +49,6 @@ export const WorkSection: React.FC<WorkSectionProps> = ({
       <WishWall onIncrementHellos={onIncrementHellos} />
     </section>
   );
-};
+});
+
+WorkSection.displayName = 'WorkSection';

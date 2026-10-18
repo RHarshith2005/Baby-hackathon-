@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { PingletMood } from '../game/packetRules';
+import { audioSystem } from '../utils/audioSynth';
 
 export type StorySceneVariant = 'attic' | 'glitch' | 'delivery' | 'neighborhood' | 'musicbox';
 
@@ -13,11 +14,10 @@ interface PingletSvgProps {
   showBackdrop?: boolean;
 }
 
-export const PingletSvg: React.FC<PingletSvgProps> = ({
+export const PingletSvg: React.FC<PingletSvgProps> = React.memo(({
   mood = 'excited',
   sceneVariant,
   className = 'w-full h-auto max-w-[360px]',
-  size = 420,
   alt,
   interactiveTilt = true,
   showBackdrop = true,
@@ -26,6 +26,10 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [isBlinking, setIsBlinking] = useState(false);
+  const [isSquished, setIsSquished] = useState(false);
+  const [showPuff, setShowPuff] = useState(false);
+  const [idleAction, setIdleAction] = useState<'none' | 'look-left' | 'look-right' | 'wave'>('none');
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -35,6 +39,84 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
+
+  // Natural Blinking: Blink every 3-5 seconds (unless sleepy or reduced motion)
+  useEffect(() => {
+    if (mood === 'sleepy' || reducedMotion) return;
+    let timer: number;
+    let cancel = false;
+
+    const scheduleBlink = () => {
+      const wait = 3000 + Math.random() * 2000;
+      timer = window.setTimeout(() => {
+        if (cancel) return;
+        setIsBlinking(true);
+        window.setTimeout(() => {
+          if (cancel) return;
+          setIsBlinking(false);
+          scheduleBlink();
+        }, 120);
+      }, wait);
+    };
+
+    scheduleBlink();
+    return () => {
+      cancel = true;
+      window.clearTimeout(timer);
+    };
+  }, [mood, reducedMotion]);
+
+  // Idle >8s: Look around and wave
+  useEffect(() => {
+    if (reducedMotion) return;
+    let idleTimer: number;
+    let animTimer1: number;
+    let animTimer2: number;
+    let animTimer3: number;
+    let cancel = false;
+
+    const resetIdle = () => {
+      if (cancel) return;
+      setIdleAction('none');
+      window.clearTimeout(idleTimer);
+      window.clearTimeout(animTimer1);
+      window.clearTimeout(animTimer2);
+      window.clearTimeout(animTimer3);
+
+      idleTimer = window.setTimeout(() => {
+        if (cancel) return;
+        setIdleAction('look-left');
+        animTimer1 = window.setTimeout(() => {
+          if (cancel) return;
+          setIdleAction('look-right');
+          animTimer2 = window.setTimeout(() => {
+            if (cancel) return;
+            setIdleAction('wave');
+            animTimer3 = window.setTimeout(() => {
+              if (cancel) return;
+              setIdleAction('none');
+              resetIdle();
+            }, 2200);
+          }, 1000);
+        }, 1000);
+      }, 8000);
+    };
+
+    resetIdle();
+    const handleActivity = () => resetIdle();
+    window.addEventListener('pointermove', handleActivity, { passive: true });
+    window.addEventListener('pointerdown', handleActivity, { passive: true });
+
+    return () => {
+      cancel = true;
+      window.clearTimeout(idleTimer);
+      window.clearTimeout(animTimer1);
+      window.clearTimeout(animTimer2);
+      window.clearTimeout(animTimer3);
+      window.removeEventListener('pointermove', handleActivity);
+      window.removeEventListener('pointerdown', handleActivity);
+    };
+  }, [reducedMotion]);
 
   const updateTiltFromPoint = (clientX: number, clientY: number) => {
     if (!interactiveTilt || reducedMotion || !containerRef.current) return;
@@ -51,8 +133,30 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
     updateTiltFromPoint(e.clientX, e.clientY);
   };
 
+  const triggerTapReaction = useCallback(() => {
+    if (reducedMotion) return;
+    setIsSquished(true);
+    setShowPuff(true);
+    audioSystem.playGiggle();
+
+    window.setTimeout(() => {
+      setIsSquished(false);
+    }, 380);
+
+    window.setTimeout(() => {
+      setShowPuff(false);
+    }, 1100);
+  }, [reducedMotion]);
+
   const handlePointerDown = (e: React.PointerEvent) => {
     updateTiltFromPoint(e.clientX, e.clientY);
+    triggerTapReaction();
+  };
+
+  const handleMouseEnter = () => {
+    if (!reducedMotion && !isSquished) {
+      triggerTapReaction();
+    }
   };
 
   const handlePointerLeave = () => {
@@ -60,47 +164,44 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
     setTilt({ x: 0, y: 0 });
   };
 
-  const imageSrc = `/pinglet_${mood}.png`;
   const computedAlt =
     alt ||
     `Glossy 3D designer-toy render of Pinglet the translucent mint-to-lavender jelly resin baby ghost in ${mood} pose, with suspended glitter, glowing gumdrop antenna tufts, pixel-heart blush cheeks, and a candy-wrapped envelope.`;
 
-  const parallaxX = reducedMotion ? 0 : tilt.x * 10;
-  const parallaxY = reducedMotion ? 0 : tilt.y * 10;
-  const starParallaxX = reducedMotion ? 0 : -tilt.x * 16;
-  const starParallaxY = reducedMotion ? 0 : -tilt.y * 16;
+  const parallaxX = reducedMotion ? 0 : tilt.x * 6;
+  const parallaxY = reducedMotion ? 0 : tilt.y * 6;
+  const starParallaxX = reducedMotion ? 0 : -tilt.x * 14;
+  const starParallaxY = reducedMotion ? 0 : -tilt.y * 14;
+
+  // Eye gaze tracking calculations
+  const lookOffset = idleAction === 'look-left' ? -6 : idleAction === 'look-right' ? 6 : 0;
+  const eyePupilX = (tilt.x * 8 + lookOffset);
+  const eyePupilY = (tilt.y * 8);
 
   return (
     <div
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
+      onMouseEnter={handleMouseEnter}
       onPointerLeave={handlePointerLeave}
-      className={`relative select-none flex items-center justify-center ${className}`}
+      className={`relative select-none flex items-center justify-center cursor-pointer ${className}`}
       style={{
         perspective: '900px',
       }}
     >
-      {/* Semantic lazy-loaded <img> referencing the requested pinglet_<mood>.png render */}
-      <img
-        src={imageSrc}
-        alt={computedAlt}
-        loading="lazy"
-        width={size}
-        height={size}
-        referrerPolicy="no-referrer"
-        className="sr-only"
-      />
-
       <div
         className={`w-full h-full transition-transform duration-200 ease-out ${
-          mood === 'glitchy' && !reducedMotion ? 'animate-rgb-glitch' : ''
+          mood === 'glitchy' && !reducedMotion ? 'animate-glitch-jitter' : ''
         }`}
         style={{
           transform: reducedMotion
             ? 'none'
-            : `rotateY(${tilt.x * 11}deg) rotateX(${-tilt.y * 11}deg) translate3d(${parallaxX * 0.4}px, ${parallaxY * 0.4}px, 0)`,
+            : `rotateY(${tilt.x * 9}deg) rotateX(${-tilt.y * 9}deg) translate3d(${parallaxX * 0.4}px, ${parallaxY * 0.4}px, 0) scale(${
+                isSquished ? '1.08, 0.92' : '1, 1'
+              })`,
           transformStyle: 'preserve-3d',
+          transition: isSquished ? 'transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1)' : 'transform 260ms ease-out',
         }}
       >
         <svg
@@ -159,200 +260,220 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
               <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
             </linearGradient>
 
-            {/* Gumdrop Antenna Left (Glowing Mint Jelly) */}
-            <radialGradient id={`gumdropMint-${uniqueId}`} cx="35%" cy="30%" r="65%">
+            {/* Gumdrop Tufts Gradients */}
+            <linearGradient id={`gumdropMint-${uniqueId}`} x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#FFFFFF" />
               <stop offset="35%" stopColor="#9FF3D3" />
-              <stop offset="80%" stopColor="#3CE3A8" />
-              <stop offset="100%" stopColor="#17B882" />
-            </radialGradient>
+              <stop offset="100%" stopColor="#5EDEA7" />
+            </linearGradient>
 
-            {/* Gumdrop Antenna Right (Glowing Berry-Lavender Jelly) */}
-            <radialGradient id={`gumdropLav-${uniqueId}`} cx="35%" cy="30%" r="65%">
+            <linearGradient id={`gumdropLav-${uniqueId}`} x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="35%" stopColor="#FFD1E6" />
-              <stop offset="75%" stopColor="#E86FA0" />
-              <stop offset="100%" stopColor="#B9A7FF" />
-            </radialGradient>
+              <stop offset="35%" stopColor="#D5C7FF" />
+              <stop offset="100%" stopColor="#A48CFF" />
+            </linearGradient>
 
-            {/* Glossy 3D Candy Star Gradient (Butter Gold) */}
-            <radialGradient id={`candyStarGold-${uniqueId}`} cx="35%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="35%" stopColor="#FFF0B3" />
-              <stop offset="80%" stopColor="#FFB870" />
-              <stop offset="100%" stopColor="#E8874A" />
-            </radialGradient>
+            {/* Shiny Big Eye Gloss Gradient */}
+            <linearGradient id={`shinyEye-${uniqueId}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1B1B3A" />
+              <stop offset="58%" stopColor="#1B1B3A" />
+              <stop offset="82%" stopColor="#3C326B" />
+              <stop offset="100%" stopColor="#6C59BD" />
+            </linearGradient>
 
-            {/* Glossy 3D Candy Star Gradient (Mint) */}
-            <radialGradient id={`candyStarMint-${uniqueId}`} cx="35%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="40%" stopColor="#9FF3D3" />
-              <stop offset="100%" stopColor="#4BC9A0" />
-            </radialGradient>
-
-            {/* Glossy 3D Candy Star Gradient (Pink) */}
-            <radialGradient id={`candyStarPink-${uniqueId}`} cx="35%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="40%" stopColor="#FFA8CC" />
-              <stop offset="100%" stopColor="#E86FA0" />
-            </radialGradient>
-
-            {/* Deep Glossy Eye Gradient */}
-            <radialGradient id={`shinyEye-${uniqueId}`} cx="36%" cy="32%" r="68%">
-              <stop offset="0%" stopColor="#3B2D66" />
-              <stop offset="65%" stopColor="#1B1B3A" />
-              <stop offset="100%" stopColor="#0C0C1E" />
-            </radialGradient>
-
-            {/* Candy-Wrapped Envelope Gradient */}
+            {/* Candy Envelope Gradient */}
             <linearGradient id={`candyEnv-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#FFF8EE" />
-              <stop offset="55%" stopColor="#FFD6E7" />
+              <stop offset="50%" stopColor="#FFF0B3" />
               <stop offset="100%" stopColor="#FFC9A8" />
             </linearGradient>
 
-            {/* Contact Shadow */}
+            {/* Ground Contact Shadow Gradient */}
             <radialGradient id={`contactShadow-${uniqueId}`} cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#1B1B3A" stopOpacity="0.42" />
-              <stop offset="55%" stopColor="#1B1B3A" stopOpacity="0.16" />
+              <stop offset="0%" stopColor="#1B1B3A" stopOpacity="0.38" />
+              <stop offset="60%" stopColor="#1B1B3A" stopOpacity="0.14" />
               <stop offset="100%" stopColor="#1B1B3A" stopOpacity="0" />
             </radialGradient>
+
+            {/* Dynamic CSS Keyframes inside SVG for Breathing, Antenna Sway, and Glitch */}
+            <style>{`
+              @keyframes breathe-${uniqueId} {
+                0%, 100% { transform: scaleY(1); }
+                50% { transform: scaleY(1.02); }
+              }
+              @keyframes antenna-left-${uniqueId} {
+                0%, 100% { transform: rotate(-3deg); }
+                50% { transform: rotate(3deg); }
+              }
+              @keyframes antenna-right-${uniqueId} {
+                0%, 100% { transform: rotate(3deg); }
+                50% { transform: rotate(-3deg); }
+              }
+              @keyframes gumdrop-pulse-${uniqueId} {
+                0%, 100% { opacity: 0.42; }
+                50% { opacity: 0.75; }
+              }
+              @keyframes wave-arm-${uniqueId} {
+                0%, 100% { transform: rotate(0deg); }
+                25% { transform: rotate(-18deg); }
+                75% { transform: rotate(18deg); }
+              }
+              .pinglet-body-breathe-${uniqueId} {
+                transform-origin: 200px 330px;
+                animation: ${reducedMotion ? 'none' : `breathe-${uniqueId} 3.5s ease-in-out infinite`};
+              }
+              .pinglet-antenna-l-${uniqueId} {
+                transform-origin: 166px 96px;
+                animation: ${reducedMotion ? 'none' : `antenna-left-${uniqueId} 3.2s ease-in-out infinite`};
+              }
+              .pinglet-antenna-r-${uniqueId} {
+                transform-origin: 234px 96px;
+                animation: ${reducedMotion ? 'none' : `antenna-right-${uniqueId} 3.2s ease-in-out infinite 0.5s`};
+              }
+              .pinglet-glow-${uniqueId} {
+                animation: ${reducedMotion ? 'none' : `gumdrop-pulse-${uniqueId} 2.6s ease-in-out infinite alternate`};
+              }
+              .pinglet-arm-wave-${uniqueId} {
+                transform-origin: 302px 210px;
+                animation: ${idleAction === 'wave' && !reducedMotion ? `wave-arm-${uniqueId} 0.5s ease-in-out 4` : 'none'};
+              }
+            `}</style>
           </defs>
 
-          {/* Dreamy Sunset Rounded Card Backdrop with Shallow DOF Bokeh */}
+          {/* Optional Rounded Color-Blocked Backdrop Pill */}
           {showBackdrop && (
             <g>
               <rect
-                x="24"
-                y="18"
-                width="352"
-                height="368"
-                rx="64"
+                x="20"
+                y="16"
+                width="360"
+                height="388"
+                rx="48"
                 fill={`url(#sunsetBg-${uniqueId})`}
-                stroke="#FFFFFF"
-                strokeWidth="5"
-                strokeOpacity="0.7"
+                opacity="0.94"
               />
-              {/* Soft Studio Rim Inner Glow */}
               <rect
-                x="30"
-                y="24"
-                width="340"
-                height="356"
-                rx="58"
+                x="20"
+                y="16"
+                width="360"
+                height="388"
+                rx="48"
                 fill="none"
-                stroke="#FFFFFF"
-                strokeWidth="2"
-                strokeOpacity="0.4"
+                stroke="#1B1B3A"
+                strokeWidth="4"
               />
-              {/* Shallow Depth-of-Field Bokeh Circles */}
-              <circle cx="88" cy="92" r="34" fill="#FFF0B3" opacity="0.28" />
-              <circle cx="318" cy="110" r="44" fill="#FFFFFF" opacity="0.22" />
-              <circle cx="80" cy="295" r="28" fill="#9FF3D3" opacity="0.25" />
-              <circle cx="315" cy="285" r="38" fill="#B9A7FF" opacity="0.26" />
+              {/* Retro Dotted Corner Accents */}
+              <circle cx="48" cy="44" r="4" fill="#1B1B3A" />
+              <circle cx="62" cy="44" r="4" fill="#1B1B3A" />
+              <circle cx="352" cy="44" r="4" fill="#1B1B3A" />
+              <circle cx="338" cy="44" r="4" fill="#1B1B3A" />
             </g>
           )}
 
-          {/* Floating Glossy 3D Candy Stars (Parallax Layer) */}
+          {/* Floating Parallax 3D Candy Stars */}
           <g
             style={{
               transform: `translate(${starParallaxX}px, ${starParallaxY}px)`,
               transition: 'transform 180ms ease-out',
             }}
           >
-            {/* Top-Left Plump 3D Gold Candy Star */}
-            <g transform="translate(66, 86) rotate(-14)">
-              <path
-                d="M 0 -22 C 5 -9 9 -5 22 0 C 9 5 5 9 0 22 C -5 9 -9 5 -22 0 C -9 -5 -5 -9 0 -22 Z"
-                fill={`url(#candyStarGold-${uniqueId})`}
-              />
-              <ellipse cx="-4" cy="-6" rx="4" ry="2.2" transform="rotate(-30 -4 -6)" fill="#FFFFFF" opacity="0.85" />
-            </g>
-
-            {/* Top-Right Plump 3D Mint Candy Star */}
-            <g transform="translate(332, 92) rotate(18)">
-              <path
-                d="M 0 -19 C 4.5 -8 8 -4.5 19 0 C 8 4.5 4.5 8 0 19 C -4.5 8 -8 4.5 -19 0 C -8 -4.5 -4.5 -8 0 -19 Z"
-                fill={`url(#candyStarMint-${uniqueId})`}
-              />
-              <circle cx="-3" cy="-5" r="3" fill="#FFFFFF" opacity="0.85" />
-            </g>
-
-            {/* Bottom-Left Plump 3D Pink Candy Star */}
-            <g transform="translate(58, 256) rotate(12)">
-              <path
-                d="M 0 -16 C 4 -7 7 -4 16 0 C 7 4 4 7 0 16 C -4 7 -7 4 -16 0 C -7 -4 -4 -7 0 -16 Z"
-                fill={`url(#candyStarPink-${uniqueId})`}
-              />
-              <circle cx="-2.5" cy="-4" r="2.5" fill="#FFFFFF" opacity="0.85" />
-            </g>
-
-            {/* Bottom-Right Plump 3D Gold Candy Star */}
-            <g transform="translate(338, 248) rotate(-20)">
-              <path
-                d="M 0 -18 C 4.2 -7.5 7.5 -4.2 18 0 C 7.5 4.2 4.2 7.5 0 18 C -4.2 7.5 -7.5 4.2 -18 0 C -7.5 -4.2 -4.2 -7.5 0 -18 Z"
-                fill={`url(#candyStarGold-${uniqueId})`}
-              />
-              <circle cx="-3" cy="-4.5" r="2.8" fill="#FFFFFF" opacity="0.85" />
-            </g>
-
-            {/* Extra Floating Mini Sugar Pearls */}
+            {/* Top-Right Candy Star */}
+            <path
+              d="M 326 78 C 329 90 334 95 346 98 C 334 101 329 106 326 118 C 323 106 318 101 306 98 C 318 95 323 90 326 78 Z"
+              fill="#FFF0B3"
+              stroke="#1B1B3A"
+              strokeWidth="3.5"
+            />
+            {/* Top-Left Candy Star */}
+            <path
+              d="M 72 88 C 74 98 78 102 88 104 C 78 106 74 110 72 120 C 70 110 66 106 56 104 C 66 102 70 98 72 88 Z"
+              fill="#9FF3D3"
+              stroke="#1B1B3A"
+              strokeWidth="3"
+            />
+            {/* Bottom-Right Candy Star */}
+            <path
+              d="M 338 286 C 340 294 343 297 351 299 C 343 301 340 304 338 312 C 336 304 333 301 325 299 C 333 297 336 294 338 286 Z"
+              fill="#E86FA0"
+              stroke="#1B1B3A"
+              strokeWidth="3"
+            />
+            {/* Floating Soft Candy Pearls */}
             <circle cx="96" cy="148" r="5.5" fill="#FFF0B3" opacity="0.9" />
             <circle cx="306" cy="158" r="6.5" fill="#9FF3D3" opacity="0.9" />
             <circle cx="312" cy="60" r="4.5" fill="#FFFFFF" opacity="0.85" />
           </g>
 
+          {/* Heart / Star Puff Animation upon Tap or Hover */}
+          {showPuff && !reducedMotion && (
+            <g
+              className="transition-all duration-700 ease-out"
+              style={{
+                transform: 'translate(200px, 32px)',
+              }}
+            >
+              {/* Floating Heart */}
+              <path
+                d="M 0 -8 C -4 -16 -16 -12 -14 -2 C -12 7 0 14 0 14 C 0 14 12 7 14 -2 C 16 -12 4 -16 0 -8 Z"
+                fill="#FF6B9D"
+                stroke="#1B1B3A"
+                strokeWidth="2.5"
+                className="animate-bounce"
+              />
+              <circle cx="-5" cy="-6" r="1.5" fill="#FFFFFF" />
+            </g>
+          )}
+
           {/* Soft Ground Contact Shadow */}
           <ellipse cx="200" cy="354" rx="88" ry="18" fill={`url(#contactShadow-${uniqueId})`} />
 
-          {/* Main Character Group */}
+          {/* Main Character Group (with Idle Breathing) */}
           <g
+            className={`pinglet-body-breathe-${uniqueId}`}
             style={{
               transform: `translate(${parallaxX}px, ${parallaxY}px)`,
               transition: 'transform 160ms ease-out',
             }}
           >
-            {/* 1. TWO GLOWING GUMDROP-SHAPED ANTENNA TUFTS */}
+            {/* 1. TWO GLOWING GUMDROP-SHAPED ANTENNA TUFTS (Swaying with phase offset) */}
             <g>
-              {/* Left Antenna Stem */}
-              <path
-                d="M 166 96 C 156 72 138 60 128 50"
-                fill="none"
-                stroke="#1B1B3A"
-                strokeWidth="5.5"
-                strokeLinecap="round"
-              />
-              {/* Left Gumdrop Glow Halo */}
-              <circle cx="122" cy="44" r="24" fill="#9FF3D3" opacity="0.45" />
-              {/* Left Gumdrop Tuft Silhouette */}
-              <path
-                d="M 106 52 C 104 34 114 24 124 24 C 134 24 142 34 140 52 C 139 58 107 58 106 52 Z"
-                fill={`url(#gumdropMint-${uniqueId})`}
-                stroke="#1B1B3A"
-                strokeWidth="3"
-              />
-              {/* Left Gumdrop Gloss Highlight */}
-              <ellipse cx="118" cy="34" rx="6" ry="3.2" transform="rotate(-24 118 34)" fill="#FFFFFF" opacity="0.92" />
+              {/* Left Antenna Stem & Tuft */}
+              <g className={`pinglet-antenna-l-${uniqueId}`}>
+                <path
+                  d="M 166 96 C 156 72 138 60 128 50"
+                  fill="none"
+                  stroke="#1B1B3A"
+                  strokeWidth="5.5"
+                  strokeLinecap="round"
+                />
+                <circle cx="122" cy="44" r="24" fill="#9FF3D3" className={`pinglet-glow-${uniqueId}`} />
+                <path
+                  d="M 106 52 C 104 34 114 24 124 24 C 134 24 142 34 140 52 C 139 58 107 58 106 52 Z"
+                  fill={`url(#gumdropMint-${uniqueId})`}
+                  stroke="#1B1B3A"
+                  strokeWidth="3"
+                />
+                <ellipse cx="118" cy="34" rx="6" ry="3.2" transform="rotate(-24 118 34)" fill="#FFFFFF" opacity="0.92" />
+              </g>
 
-              {/* Right Antenna Stem */}
-              <path
-                d="M 234 96 C 244 72 262 60 272 50"
-                fill="none"
-                stroke="#1B1B3A"
-                strokeWidth="5.5"
-                strokeLinecap="round"
-              />
-              {/* Right Gumdrop Glow Halo */}
-              <circle cx="278" cy="44" r="24" fill="#E86FA0" opacity="0.42" />
-              {/* Right Gumdrop Tuft Silhouette */}
-              <path
-                d="M 260 52 C 258 34 266 24 276 24 C 286 24 296 34 294 52 C 293 58 261 58 260 52 Z"
-                fill={`url(#gumdropLav-${uniqueId})`}
-                stroke="#1B1B3A"
-                strokeWidth="3"
-              />
-              {/* Right Gumdrop Gloss Highlight */}
-              <ellipse cx="271" cy="34" rx="6" ry="3.2" transform="rotate(-24 271 34)" fill="#FFFFFF" opacity="0.92" />
+              {/* Right Antenna Stem & Tuft */}
+              <g className={`pinglet-antenna-r-${uniqueId}`}>
+                <path
+                  d="M 234 96 C 244 72 262 60 272 50"
+                  fill="none"
+                  stroke="#1B1B3A"
+                  strokeWidth="5.5"
+                  strokeLinecap="round"
+                />
+                <circle cx="278" cy="44" r="24" fill="#E86FA0" className={`pinglet-glow-${uniqueId}`} />
+                <path
+                  d="M 260 52 C 258 34 266 24 276 24 C 286 24 296 34 294 52 C 293 58 261 58 260 52 Z"
+                  fill={`url(#gumdropLav-${uniqueId})`}
+                  stroke="#1B1B3A"
+                  strokeWidth="3"
+                />
+                <ellipse cx="271" cy="34" rx="6" ry="3.2" transform="rotate(-24 271 34)" fill="#FFFFFF" opacity="0.92" />
+              </g>
             </g>
 
             {/* 2. TRANSLUCENT MINT-TO-LAVENDER JELLY RESIN BODY */}
@@ -364,13 +485,13 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                     d="M 200 84 C 128 84 98 136 92 198 C 86 248 84 292 94 322 C 102 336 122 332 138 322 C 154 312 168 336 186 328 C 200 320 214 336 232 328 C 248 320 264 336 282 324 C 296 314 306 330 310 318 C 316 286 314 248 308 198 C 302 136 272 84 200 84 Z"
                     fill="#9FF3D3"
                     opacity="0.55"
-                    transform="translate(-8, -3)"
+                    transform="translate(-6, -2)"
                   />
                   <path
                     d="M 200 84 C 128 84 98 136 92 198 C 86 248 84 292 94 322 C 102 336 122 332 138 322 C 154 312 168 336 186 328 C 200 320 214 336 232 328 C 248 320 264 336 282 324 C 296 314 306 330 310 318 C 316 286 314 248 308 198 C 302 136 272 84 200 84 Z"
                     fill="#E86FA0"
                     opacity="0.55"
-                    transform="translate(8, 3)"
+                    transform="translate(6, 2)"
                   />
                 </>
               )}
@@ -401,13 +522,11 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
 
               {/* 3. GLITTER SUSPENDED INSIDE THE JELLY RESIN */}
               <g opacity="0.88">
-                {/* 4-point sparkle flakes suspended inside translucent resin */}
                 <path d="M 142 132 L 145 140 L 153 143 L 145 146 L 142 154 L 139 146 L 131 143 L 139 140 Z" fill="#FFFFFF" />
                 <path d="M 258 142 L 260 148 L 266 150 L 260 152 L 258 158 L 256 152 L 250 150 L 256 148 Z" fill="#FFF0B3" />
                 <path d="M 122 252 L 125 259 L 132 262 L 125 265 L 122 272 L 119 265 L 112 262 L 119 259 Z" fill="#FFF0B3" />
                 <path d="M 276 246 L 279 253 L 286 256 L 279 259 L 276 266 L 273 259 L 266 256 L 273 253 Z" fill="#FFFFFF" />
                 <path d="M 198 112 L 200 118 L 206 120 L 200 122 L 198 128 L 196 122 L 190 120 L 196 118 Z" fill="#FFFFFF" />
-                {/* Suspended holographic glitter dots */}
                 <circle cx="164" cy="122" r="3.5" fill="#FFF0B3" />
                 <circle cx="236" cy="128" r="4" fill="#9FF3D3" />
                 <circle cx="116" cy="196" r="4.5" fill="#FFFFFF" opacity="0.75" />
@@ -432,7 +551,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                 "
                 fill={`url(#glossHighlight-${uniqueId})`}
               />
-              {/* Secondary Glossy Pill Highlight */}
               <ellipse
                 cx="264"
                 cy="132"
@@ -446,7 +564,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
 
             {/* 4. PIXEL-HEART BLUSH CHEEKS */}
             <g>
-              {/* Left Pixel-Heart Blush */}
               <g transform="translate(106, 206)">
                 <rect x="4" y="0" width="6" height="6" fill="#FF6B9D" />
                 <rect x="10" y="0" width="6" height="6" fill="#FF6B9D" />
@@ -457,8 +574,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                 <rect x="10" y="18" width="20" height="6" fill="#FF85B1" />
                 <rect x="16" y="24" width="8" height="6" fill="#FF9EC7" />
               </g>
-
-              {/* Right Pixel-Heart Blush */}
               <g transform="translate(254, 206)">
                 <rect x="4" y="0" width="6" height="6" fill="#FF6B9D" />
                 <rect x="10" y="0" width="6" height="6" fill="#FF6B9D" />
@@ -471,10 +586,9 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
               </g>
             </g>
 
-            {/* 5. HUGE SHINY EYES & EXPRESSION */}
+            {/* 5. HUGE SHINY EYES & REAL EYE TRACKING */}
             {mood === 'sleepy' ? (
               <g>
-                {/* Closed Peaceful Eyelids with Lashes */}
                 <path
                   d="M 136 186 Q 158 206 180 186"
                   fill="none"
@@ -489,10 +603,8 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                   strokeWidth="7"
                   strokeLinecap="round"
                 />
-                {/* Cute sleepy o-mouth */}
                 <ellipse cx="200" cy="208" rx="6" ry="7.5" fill="#1B1B3A" />
                 <ellipse cx="200" cy="209" rx="4" ry="4.5" fill="#FF85B1" />
-                {/* Floating Glossy Zzz */}
                 <text x="284" y="136" fill="#FFF0B3" stroke="#1B1B3A" strokeWidth="1.5" fontFamily="Fredoka, sans-serif" fontSize="26" fontWeight="700">
                   z
                 </text>
@@ -503,26 +615,32 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
             ) : (
               <g
                 style={{
-                  transform: `translate(${tilt.x * 5}px, ${tilt.y * 5}px)`,
+                  transform: isBlinking ? 'scaleY(0.1)' : `translate(${tilt.x * 2.5}px, ${tilt.y * 2.5}px)`,
+                  transformOrigin: '200px 182px',
+                  transition: 'transform 80ms ease-out',
                 }}
               >
-                {/* Left Huge Shiny Eye */}
+                {/* Left Eye Base Sockets */}
                 <ellipse cx="158" cy="182" rx="24" ry="29" fill={`url(#shinyEye-${uniqueId})`} />
-                {/* Lower iris jelly reflection */}
                 <path d="M 142 196 Q 158 208 174 196" fill="none" stroke="#B9A7FF" strokeWidth="3.5" strokeLinecap="round" opacity="0.65" />
-                {/* Big Glossy Catchlight */}
-                <circle cx="149" cy="169" r="10.5" fill="#FFFFFF" />
-                {/* Secondary Catchlight */}
-                <circle cx="168" cy="192" r="5.5" fill="#FFFFFF" />
-                {/* Tiny Star Highlight */}
-                <circle cx="166" cy="171" r="3" fill="#9FF3D3" />
 
-                {/* Right Huge Shiny Eye */}
+                {/* Left Eye Pupils and Catchlights (Following pointer with deeper parallax) */}
+                <g style={{ transform: `translate(${eyePupilX}px, ${eyePupilY}px)`, transition: 'transform 120ms ease-out' }}>
+                  <circle cx="149" cy="169" r="10.5" fill="#FFFFFF" />
+                  <circle cx="168" cy="192" r="5.5" fill="#FFFFFF" />
+                  <circle cx="166" cy="171" r="3" fill="#9FF3D3" />
+                </g>
+
+                {/* Right Eye Base Sockets */}
                 <ellipse cx="242" cy="182" rx="24" ry="29" fill={`url(#shinyEye-${uniqueId})`} />
                 <path d="M 226 196 Q 242 208 258 196" fill="none" stroke="#B9A7FF" strokeWidth="3.5" strokeLinecap="round" opacity="0.65" />
-                <circle cx="233" cy="169" r="10.5" fill="#FFFFFF" />
-                <circle cx="252" cy="192" r="5.5" fill="#FFFFFF" />
-                <circle cx="250" cy="171" r="3" fill="#9FF3D3" />
+
+                {/* Right Eye Pupils and Catchlights */}
+                <g style={{ transform: `translate(${eyePupilX}px, ${eyePupilY}px)`, transition: 'transform 120ms ease-out' }}>
+                  <circle cx="233" cy="169" r="10.5" fill="#FFFFFF" />
+                  <circle cx="252" cy="192" r="5.5" fill="#FFFFFF" />
+                  <circle cx="250" cy="171" r="3" fill="#9FF3D3" />
+                </g>
 
                 {/* Mouth by Mood */}
                 {mood === 'excited' ? (
@@ -543,7 +661,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                     strokeLinejoin="round"
                   />
                 ) : (
-                  /* Shy tiny smile */
                   <path
                     d="M 193 208 Q 200 215 207 208"
                     fill="none"
@@ -565,7 +682,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                   : 'translate(0, 4)'
               }
             >
-              {/* Left Candy-Wrapper Twist */}
               <path
                 d="M 142 258 L 120 244 C 116 254 116 264 120 274 Z"
                 fill="#FF9EC7"
@@ -573,7 +689,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                 strokeWidth="3.5"
                 strokeLinejoin="round"
               />
-              {/* Right Candy-Wrapper Twist */}
               <path
                 d="M 258 258 L 280 244 C 284 254 284 264 280 274 Z"
                 fill="#9FF3D3"
@@ -581,8 +696,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                 strokeWidth="3.5"
                 strokeLinejoin="round"
               />
-
-              {/* Candy-Wrapped Envelope Body */}
               <rect
                 x="140"
                 y="234"
@@ -593,7 +706,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                 stroke="#1B1B3A"
                 strokeWidth="4"
               />
-              {/* Envelope Flap Lines */}
               <path
                 d="M 144 240 L 200 276 L 256 240"
                 fill="none"
@@ -602,11 +714,8 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              {/* Candy Stripes on Envelope Corners */}
               <path d="M 148 298 L 166 280" stroke="#FF9EC7" strokeWidth="4" strokeLinecap="round" />
               <path d="M 252 298 L 234 280" stroke="#9FF3D3" strokeWidth="4" strokeLinecap="round" />
-
-              {/* Glossy Heart Wax Seal in Center of Envelope */}
               <path
                 d="M 200 265 C 194 257 182 260 184 270 C 186 279 200 286 200 286 C 200 286 214 279 216 270 C 218 260 206 257 200 265 Z"
                 fill="#E86FA0"
@@ -616,10 +725,9 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
               <circle cx="194" cy="267" r="2.2" fill="#FFFFFF" opacity="0.9" />
             </g>
 
-            {/* Stubby Translucent Jelly Arms by Pose */}
+            {/* Stubby Translucent Jelly Arms by Pose (with Waving support on right arm) */}
             {mood === 'excited' ? (
               <g>
-                {/* Arms Raised High Cheering! */}
                 <path
                   d="M 98 210 C 68 186 64 152 82 142 C 98 134 112 162 110 190 Z"
                   fill="#9FF3D3"
@@ -628,6 +736,7 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                   strokeLinejoin="round"
                 />
                 <path
+                  className={`pinglet-arm-wave-${uniqueId}`}
                   d="M 302 210 C 332 186 336 152 318 142 C 302 134 288 162 290 190 Z"
                   fill="#9FF3D3"
                   stroke="#1B1B3A"
@@ -637,7 +746,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
               </g>
             ) : (
               <g>
-                {/* Arms Hugging the Candy-Wrapped Envelope */}
                 <ellipse
                   cx="132"
                   cy="262"
@@ -648,16 +756,18 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
                   stroke="#1B1B3A"
                   strokeWidth="4"
                 />
-                <ellipse
-                  cx="268"
-                  cy="262"
-                  rx="22"
-                  ry="14"
-                  transform="rotate(-22 268 262)"
-                  fill="#9FF3D3"
-                  stroke="#1B1B3A"
-                  strokeWidth="4"
-                />
+                <g className={`pinglet-arm-wave-${uniqueId}`}>
+                  <ellipse
+                    cx="268"
+                    cy="262"
+                    rx="22"
+                    ry="14"
+                    transform="rotate(-22 268 262)"
+                    fill="#9FF3D3"
+                    stroke="#1B1B3A"
+                    strokeWidth="4"
+                  />
+                </g>
               </g>
             )}
           </g>
@@ -665,4 +775,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = ({
       </div>
     </div>
   );
-};
+});
+
+PingletSvg.displayName = 'PingletSvg';

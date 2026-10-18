@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { PingletSvg } from './PingletSvg';
 import { audioSystem } from '../utils/audioSynth';
 import { X } from 'lucide-react';
@@ -18,32 +18,95 @@ const BURST_STARS = [
   { x: '0px', y: '-130px', color: '#9FF3D3', size: 32 },
 ];
 
-export const EasterEggModal: React.FC<EasterEggModalProps> = ({
+export const EasterEggModal: React.FC<EasterEggModalProps> = React.memo(({
   isOpen,
   onClose,
 }) => {
+  const prevIsOpenRef = useRef(false);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Play audio ONLY when isOpen transitions from false to true
+  useEffect(() => {
+    if (isOpen && !prevIsOpenRef.current) {
+      audioSystem.playHandshakeEasterEgg();
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  // Focus trap, backdrop escape, and restore focus on close
   useEffect(() => {
     if (!isOpen) return;
-    audioSystem.playHandshakeEasterEgg();
+
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+
+    // Move focus into the dialog
+    const focusTimer = window.setTimeout(() => {
+      closeButtonRef.current?.focus();
+    }, 50);
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+
+        const firstElement = focusable[0];
+        const lastElement = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener('keydown', handleKeyDown);
+      // Restore focus
+      if (previouslyFocusedRef.current && typeof previouslyFocusedRef.current.focus === 'function') {
+        previouslyFocusedRef.current.focus();
+      }
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1B1B3A]/85"
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1B1B3A]/85 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="easter-egg-title"
+      ref={dialogRef}
     >
       {/* Burst of Glossy 3D Candy Stars */}
-      <div className="relative w-full max-w-md">
+      <div className="relative w-full max-w-md pointer-events-auto">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden="true">
           {BURST_STARS.map((st, i) => (
             <svg
@@ -73,10 +136,11 @@ export const EasterEggModal: React.FC<EasterEggModalProps> = ({
               &mdash; 3:00 A.M. SECRET
             </span>
             <button
+              ref={closeButtonRef}
               type="button"
               onClick={onClose}
-              className="min-h-[44px] min-w-[44px] rounded-full bg-[#1B1B3A] text-[#FFF8EE] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
-              aria-label="Close modal"
+              className="min-h-[48px] min-w-[48px] rounded-full bg-[#1B1B3A] text-[#FFF8EE] flex items-center justify-center cursor-pointer hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-[#9FF3D3]"
+              aria-label="Close secret hug modal"
             >
               <X className="w-5 h-5" />
             </button>
@@ -106,7 +170,7 @@ export const EasterEggModal: React.FC<EasterEggModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[48px] px-8 py-3 bg-[#9FF3D3] hover:bg-[#88efd0] text-[#1B1B3A] font-rounded font-bold text-base uppercase tracking-wider rounded-full border-3 border-[#1B1B3A] toy-button-gloss cursor-pointer"
+            className="min-h-[48px] px-8 py-3 bg-[#9FF3D3] hover:bg-[#88efd0] text-[#1B1B3A] font-rounded font-bold text-base uppercase tracking-wider rounded-full border-3 border-[#1B1B3A] toy-button-gloss cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B1B3A]"
           >
             KEEP THIS HUG 💖
           </button>
@@ -114,4 +178,6 @@ export const EasterEggModal: React.FC<EasterEggModalProps> = ({
       </div>
     </div>
   );
-};
+});
+
+EasterEggModal.displayName = 'EasterEggModal';

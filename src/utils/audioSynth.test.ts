@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PENTATONIC_SCALE, LULLABY_SEQUENCE, getMidiFrequency } from './audioSynth.ts';
+import { PENTATONIC_SCALE, LULLABY_SEQUENCE, getMidiFrequency, audioSystem } from './audioSynth.ts';
 
 test('PENTATONIC_SCALE frequencies are ordered and accurate', () => {
   assert.ok(PENTATONIC_SCALE.C4 > 260 && PENTATONIC_SCALE.C4 < 262);
@@ -22,4 +22,11 @@ test('getMidiFrequency calculates 440Hz for A4 (offset 0) and 880Hz for +12', ()
   assert.equal(Math.round(getMidiFrequency(0)), 440);
   assert.equal(Math.round(getMidiFrequency(12)), 880);
   assert.equal(Math.round(getMidiFrequency(-12)), 220);
+});
+
+test('audioSystem exposes playGiggle and respects mute state without throwing', () => {
+  assert.equal(typeof audioSystem.playGiggle, 'function');
+  audioSystem.setMuted(true);
+  assert.doesNotThrow(() => audioSystem.playGiggle());
+  audioSystem.setMuted(false);
 });

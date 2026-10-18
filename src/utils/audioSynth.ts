@@ -191,6 +191,15 @@ class DialUpSoundSystem {
     }, 1300);
   }
 
+  public playGiggle() {
+    if (this.isMuted) return;
+    this.init();
+    this.playTone(880, 0.08, 'triangle');
+    setTimeout(() => {
+      this.playTone(1174.66, 0.12, 'triangle');
+    }, 90);
+  }
+
   public startLullaby() {
     this.init();
     if (this.isLullabyPlaying) return;

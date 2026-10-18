@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Volume2, VolumeX, Sun, Moon } from 'lucide-react';
 import type { PingletMood } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
@@ -11,23 +11,39 @@ interface HeaderNavProps {
   onTriggerEasterEgg: () => void;
 }
 
-export const HeaderNav: React.FC<HeaderNavProps> = ({
+export const HeaderNav: React.FC<HeaderNavProps> = React.memo(({
   currentMood,
   onSelectMood,
   isMuted,
   onToggleMute,
   onTriggerEasterEgg,
 }) => {
-  const [modemTaps, setModemTaps] = useState(0);
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (tapTimerRef.current) {
+        window.clearTimeout(tapTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleModemTap = () => {
-    const next = modemTaps + 1;
-    audioSystem.playTone(740 + next * 180, 0.09, 'sine');
-    if (next >= 3) {
-      setModemTaps(0);
+    if (tapTimerRef.current) {
+      window.clearTimeout(tapTimerRef.current);
+    }
+
+    tapCountRef.current += 1;
+    audioSystem.playTone(740 + tapCountRef.current * 180, 0.09, 'sine');
+
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
       onTriggerEasterEgg();
     } else {
-      setModemTaps(next);
+      tapTimerRef.current = window.setTimeout(() => {
+        tapCountRef.current = 0;
+      }, 1500);
     }
   };
 
@@ -40,7 +56,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#1B1B3A]/95 border-b-3 border-[#1B1B3A] shadow-lg">
+    <header className="sticky top-0 z-40 bg-[#1B1B3A]/95 border-b-3 border-[#1B1B3A] shadow-lg backdrop-blur-md">
       {/* Retro-Web Touch #1: Marquee Strip */}
       <div className="bg-[#FFF0B3] text-[#1B1B3A] overflow-hidden whitespace-nowrap py-1 border-b-2 border-[#1B1B3A] text-xs font-mono-retro font-bold">
         <div className="animate-marquee flex items-center gap-8">
@@ -55,29 +71,29 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
         </div>
       </div>
 
-      {/* Main Sticky Control Bar (Minimum 44px touch targets) */}
+      {/* Main Sticky Control Bar (Minimum 48px touch targets) */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
-        {/* Left: Blinking Modem Light (3-Tap Easter Egg) + Brand */}
+        {/* Left: Blinking Modem Light (hidden 3-tap egg) + Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={handleModemTap}
-            className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#282854] hover:bg-[#34346b] border-2 border-[#9FF3D3]/60 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
-            title="Tiny blinking modem light — tap 3 times!"
-            aria-label={`Tiny blinking modem light. Tap 3 times for secret message. Current taps: ${modemTaps}`}
+            className="min-h-[48px] px-3.5 py-2 rounded-full bg-[#282854] hover:bg-[#34346b] border-2 border-[#9FF3D3]/60 flex items-center gap-2 cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#9FF3D3]"
+            title="Modem status light"
+            aria-label="Modem status light"
           >
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9FF3D3] opacity-80" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-[#9FF3D3]" />
             </span>
-            <span className="font-mono-retro text-[11px] text-[#9FF3D3] font-bold tracking-wider">
-              56K {modemTaps > 0 ? `${modemTaps}/3` : 'LED'}
+            <span className="font-mono-retro text-xs text-[#9FF3D3] font-bold tracking-wider">
+              56K LED
             </span>
           </button>
 
           <a
             href="#hero"
-            className="font-display text-2xl sm:text-3xl text-[#FFF8EE] tracking-wider hover:text-[#9FF3D3] transition-colors py-1"
+            className="font-display text-2xl sm:text-3xl text-[#FFF8EE] tracking-wider hover:text-[#9FF3D3] transition-colors py-1 focus:outline-none focus:ring-2 focus:ring-[#9FF3D3] rounded"
           >
             PINGLET
           </a>
@@ -88,16 +104,16 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
           aria-label="Primary sections"
           className="hidden lg:flex items-center gap-5 font-rounded font-semibold text-sm text-[#FFF8EE]/90"
         >
-          <a href="#meet" className="hover:text-[#9FF3D3] transition-colors py-2">
+          <a href="#meet" className="hover:text-[#9FF3D3] transition-colors py-2 focus:outline-none focus:underline">
             Blind Box
           </a>
-          <a href="#moods" className="hover:text-[#FFC9A8] transition-colors py-2">
+          <a href="#moods" className="hover:text-[#FFC9A8] transition-colors py-2 focus:outline-none focus:underline">
             Moods
           </a>
-          <a href="#work" className="hover:text-[#B9A7FF] transition-colors py-2">
+          <a href="#work" className="hover:text-[#B9A7FF] transition-colors py-2 focus:outline-none focus:underline">
             Toy Box
           </a>
-          <a href="#story" className="hover:text-[#FFF0B3] transition-colors py-2">
+          <a href="#story" className="hover:text-[#FFF0B3] transition-colors py-2 focus:outline-none focus:underline">
             Story
           </a>
         </nav>
@@ -108,7 +124,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
           <button
             type="button"
             onClick={handleDayNightToggle}
-            className={`min-h-[44px] px-3.5 py-1.5 rounded-full font-rounded font-bold text-xs sm:text-sm border-2 border-[#1B1B3A] shadow-md flex items-center gap-1.5 cursor-pointer transition-all ${
+            className={`min-h-[48px] px-4 py-2 rounded-full font-rounded font-bold text-xs sm:text-sm border-2 border-[#1B1B3A] shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-white ${
               isNightMode
                 ? 'bg-[#B9A7FF] text-[#1B1B3A]'
                 : 'bg-[#FFF0B3] text-[#1B1B3A]'
@@ -136,7 +152,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
           <button
             type="button"
             onClick={onToggleMute}
-            className={`min-h-[44px] min-w-[44px] px-3.5 py-1.5 rounded-full font-rounded font-bold text-xs sm:text-sm border-2 cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-[48px] min-w-[48px] px-3.5 py-2 rounded-full font-rounded font-bold text-xs sm:text-sm border-2 cursor-pointer transition-all flex items-center justify-center gap-1.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white ${
               isMuted
                 ? 'bg-[#E86FA0] text-[#1B1B3A] border-[#1B1B3A]'
                 : 'bg-[#9FF3D3] text-[#1B1B3A] border-[#1B1B3A]'
@@ -151,4 +167,6 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
       </div>
     </header>
   );
-};
+});
+
+HeaderNav.displayName = 'HeaderNav';

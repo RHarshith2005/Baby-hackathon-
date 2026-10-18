@@ -23,7 +23,7 @@ interface WishWallProps {
   onIncrementHellos?: () => void;
 }
 
-export const WishWall: React.FC<WishWallProps> = ({ onIncrementHellos }) => {
+export const WishWall: React.FC<WishWallProps> = React.memo(({ onIncrementHellos }) => {
   const [stickers, setStickers] = useState<StickerWish[]>(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -73,7 +73,7 @@ export const WishWall: React.FC<WishWallProps> = ({ onIncrementHellos }) => {
   };
 
   return (
-    <div className="relative w-full bg-[#FFC9A8] text-[#1B1B3A] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-b-4 border-[#1B1B3A] overflow-hidden">
+    <div id="wish-wall" className="relative w-full bg-[#FFC9A8] text-[#1B1B3A] px-4 sm:px-8 md:px-14 py-12 sm:py-16 border-b-4 border-[#1B1B3A] overflow-hidden scroll-mt-24 sm:scroll-mt-28">
       {/* Pale Oversized Circle Arc */}
       <div
         className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full border-[42px] border-white/30 pointer-events-none"
@@ -168,4 +168,6 @@ export const WishWall: React.FC<WishWallProps> = ({ onIncrementHellos }) => {
       </div>
     </div>
   );
-};
+});
+
+WishWall.displayName = 'WishWall';

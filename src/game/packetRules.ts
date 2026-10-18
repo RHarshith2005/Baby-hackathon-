@@ -94,9 +94,10 @@ export function determineGameMood(
 export function createPacketData(
   seed: number,
   idCounter: number,
-  timeSec: number
+  timeSec: number,
+  isNarrow: boolean = false
 ): Packet {
-  const lanePositions = [16, 32, 50, 68, 84];
+  const lanePositions = isNarrow ? [18, 38, 62, 82] : [16, 32, 50, 68, 84];
   const chosenX = lanePositions[Math.abs(seed + idCounter * 3) % lanePositions.length];
   const baseSpeed = 20 + Math.min(24, timeSec * 0.8);
 
