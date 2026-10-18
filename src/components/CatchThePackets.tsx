@@ -9,17 +9,19 @@ import {
 } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
 import { PingletSvg } from './PingletSvg';
-import { Play, RotateCcw } from 'lucide-react';
+import { Play, RotateCcw, Sparkles } from 'lucide-react';
 
 interface CatchThePacketsProps {
   onMoodChange?: (mood: PingletMood) => void;
   onIncrementHellos?: () => void;
   isMuted?: boolean;
+  onRoundComplete?: (finalScore: number, clientX?: number, clientY?: number) => void;
 }
 
 export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
   onMoodChange,
   onIncrementHellos,
+  onRoundComplete,
 }) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<number>(GAME_DURATION_SECONDS);
@@ -44,6 +46,8 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
   const packetIdCounterRef = useRef<number>(1);
   const timeElapsedRef = useRef<number>(0);
   const nextSpawnTimerRef = useRef<number>(0.4);
+  const scoreRef = useRef<number>(0);
+  const playfieldRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (onMoodChange) {
@@ -56,6 +60,7 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
     setIsGameOver(false);
     setTimeLeft(GAME_DURATION_SECONDS);
     setScore(0);
+    scoreRef.current = 0;
     setStreak(0);
     setMood('excited');
     packetIdCounterRef.current = 1;
@@ -77,6 +82,7 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
 
     const result = calculateCatchScore(score, streak, pkt.points);
     const nextScore = result.score;
+    scoreRef.current = nextScore;
     setScore(nextScore);
     setStreak(result.streak);
 
@@ -113,7 +119,16 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
       if (remaining <= 0) {
         setIsGameOver(true);
         setIsPlaying(false);
-        setMood('sleepy');
+        const finalScore = scoreRef.current;
+        setMood(finalScore > 0 ? 'excited' : 'sleepy');
+        if (onRoundComplete) {
+          if (playfieldRef.current) {
+            const rect = playfieldRef.current.getBoundingClientRect();
+            onRoundComplete(finalScore, rect.left + rect.width / 2, rect.top + rect.height / 2);
+          } else {
+            onRoundComplete(finalScore);
+          }
+        }
         return;
       }
 
@@ -213,6 +228,7 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
 
           {/* Interactive Tap Playfield */}
           <div
+            ref={playfieldRef}
             className="relative w-full h-[350px] sm:h-[400px] bg-gradient-to-b from-[#1F1A45] via-[#3B266B] to-[#E86FA0]/40 rounded-[2rem] border-3 border-[#B9A7FF]/40 overflow-hidden select-none"
             role="region"
             aria-label="Tap falling candy packets game board"
@@ -267,21 +283,41 @@ export const CatchThePackets: React.FC<CatchThePacketsProps> = ({
                   {isGameOver ? `SCORE: ${score} PTS!` : '20-SECOND PACKET RUSH'}
                 </h3>
 
-                <button
-                  type="button"
-                  onClick={startGame}
-                  className="min-h-[52px] px-8 py-3 bg-[#9FF3D3] hover:bg-[#88efd0] text-[#1B1B3A] font-rounded font-bold text-lg uppercase rounded-full border-3 border-[#1B1B3A] toy-button-gloss flex items-center gap-2 cursor-pointer"
-                >
-                  {isGameOver ? (
-                    <>
-                      <RotateCcw className="w-5 h-5" /> PLAY AGAIN (20S)
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-5 h-5 fill-current" /> START 20S GAME
-                    </>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={startGame}
+                    className="min-h-[52px] px-8 py-3 bg-[#9FF3D3] hover:bg-[#88efd0] text-[#1B1B3A] font-rounded font-bold text-lg uppercase rounded-full border-3 border-[#1B1B3A] toy-button-gloss flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+                  >
+                    {isGameOver ? (
+                      <>
+                        <RotateCcw className="w-5 h-5" /> PLAY AGAIN (20S)
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-5 h-5 fill-current" /> START 20S GAME
+                      </>
+                    )}
+                  </button>
+
+                  {isGameOver && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onRoundComplete && playfieldRef.current) {
+                          const rect = playfieldRef.current.getBoundingClientRect();
+                          onRoundComplete(score, rect.left + rect.width / 2, rect.top + rect.height / 2);
+                        } else if (onRoundComplete) {
+                          onRoundComplete(score);
+                        }
+                      }}
+                      className="min-h-[52px] px-6 py-3 bg-[#FFC9A8] hover:bg-[#ffb990] text-[#1B1B3A] font-rounded font-bold text-base uppercase rounded-full border-3 border-[#1B1B3A] toy-button-gloss flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+                      aria-label="Trigger burst of data packet particles"
+                    >
+                      <Sparkles className="w-5 h-5 text-[#E86FA0]" /> BURST PACKETS
+                    </button>
                   )}
-                </button>
+                </div>
               </div>
             )}
           </div>
