@@ -200,6 +200,147 @@ class DialUpSoundSystem {
     }, 90);
   }
 
+  public playBoop() {
+    if (this.isMuted) return;
+    this.init();
+    this.playTone(523.25, 0.08, 'sine');
+  }
+
+  public playLaugh() {
+    if (this.isMuted) return;
+    this.init();
+    const notes = [783.99, 1046.5, 880, 1174.66, 1318.5];
+    notes.forEach((freq, idx) => {
+      setTimeout(() => {
+        if (!this.isMuted) this.playTone(freq, 0.07, 'triangle');
+      }, idx * 70);
+    });
+  }
+
+  public playPurr() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const tremolo = this.ctx.createOscillator();
+      const tremoloGain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.value = 142;
+
+      tremolo.type = 'sine';
+      tremolo.frequency.value = 8.5;
+      tremoloGain.gain.value = 12;
+
+      tremolo.connect(osc.frequency);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      const now = this.ctx.currentTime;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.12);
+      gain.gain.setValueAtTime(0.18, now + 1.2);
+      gain.gain.linearRampToValueAtTime(0, now + 1.5);
+
+      osc.start(now);
+      tremolo.start(now);
+      osc.stop(now + 1.5);
+      tremolo.stop(now + 1.5);
+    } catch {}
+  }
+
+  public playMunch() {
+    if (this.isMuted) return;
+    this.init();
+    this.playTone(659.25, 0.05, 'triangle');
+    setTimeout(() => {
+      if (!this.isMuted) this.playTone(880, 0.06, 'sine');
+    }, 75);
+    setTimeout(() => {
+      if (!this.isMuted) this.playTone(1046.5, 0.08, 'triangle');
+    }, 160);
+  }
+
+  public playWakeHop() {
+    if (this.isMuted) return;
+    this.init();
+    this.playTone(440, 0.05, 'sine');
+    setTimeout(() => {
+      if (!this.isMuted) this.playTone(880, 0.09, 'triangle');
+    }, 55);
+  }
+
+  public playYawn() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      const now = this.ctx.currentTime;
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(260, now + 0.65);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.1);
+      gain.gain.linearRampToValueAtTime(0, now + 0.7);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.7);
+    } catch {}
+  }
+
+  /**
+   * Speaks typed words as cute pentatonic blips (~60ms each) for offline/no-mic fallback.
+   */
+  public speakChirps(text: string, onMouthLevel?: (level: number) => void, onDone?: () => void) {
+    this.init();
+    const pentatonicNotes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99];
+    const letters = text.trim().split('');
+    if (letters.length === 0) {
+      onDone?.();
+      return;
+    }
+
+    let idx = 0;
+    const playNext = () => {
+      if (idx >= letters.length) {
+        onMouthLevel?.(0);
+        onDone?.();
+        return;
+      }
+
+      const char = letters[idx];
+      idx++;
+
+      if (char === ' ') {
+        onMouthLevel?.(0);
+        setTimeout(playNext, 70);
+        return;
+      }
+
+      const charCode = char.toLowerCase().charCodeAt(0);
+      const noteIdx = (charCode - 97 + pentatonicNotes.length * 10) % pentatonicNotes.length;
+      const freq = pentatonicNotes[noteIdx] || 440;
+      const type: OscillatorType = idx % 2 === 0 ? 'sine' : 'triangle';
+
+      if (!this.isMuted) {
+        this.playTone(freq, 0.055, type);
+      }
+      onMouthLevel?.(0.65 + (idx % 3) * 0.15);
+
+      setTimeout(() => {
+        onMouthLevel?.(0.1);
+        setTimeout(playNext, 20);
+      }, 55);
+    };
+
+    playNext();
+  }
+
   public startLullaby() {
     this.init();
     if (this.isLullabyPlaying) return;

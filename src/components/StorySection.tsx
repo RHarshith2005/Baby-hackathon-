@@ -7,6 +7,7 @@ import {
   getWirePointParametric,
   isWindowIlluminated,
 } from '../game/storyRules';
+import { trackEvent } from '../store/pingletStore';
 
 export const StorySection: React.FC = React.memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,9 @@ export const StorySection: React.FC = React.memo(() => {
   useEffect(() => {
     const unsubscribe = scrollYProgress.on('change', (v) => {
       setCurrentProgress(v);
+      if (v >= 0.95) {
+        trackEvent('storyFinished');
+      }
     });
     return () => unsubscribe();
   }, [scrollYProgress]);

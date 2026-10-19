@@ -12,6 +12,14 @@ interface PingletSvgProps {
   alt?: string;
   interactiveTilt?: boolean;
   showBackdrop?: boolean;
+  mouthOpen?: number;
+  touchReaction?: string;
+  blushMultiplier?: number;
+  eyesClosed?: boolean;
+  antennasWarm?: boolean;
+  onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp?: (e: React.PointerEvent<HTMLDivElement>) => void;
 }
 
 export const PingletSvg: React.FC<PingletSvgProps> = React.memo(({
@@ -21,6 +29,14 @@ export const PingletSvg: React.FC<PingletSvgProps> = React.memo(({
   alt,
   interactiveTilt = true,
   showBackdrop = true,
+  mouthOpen = 0,
+  touchReaction,
+  blushMultiplier = 1.0,
+  eyesClosed = false,
+  antennasWarm = false,
+  onPointerDown: externalPointerDown,
+  onPointerMove: externalPointerMove,
+  onPointerUp: externalPointerUp,
 }) => {
   const uniqueId = React.useId().replace(/:/g, '');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -129,9 +145,6 @@ export const PingletSvg: React.FC<PingletSvgProps> = React.memo(({
     });
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    updateTiltFromPoint(e.clientX, e.clientY);
-  };
 
   const triggerTapReaction = useCallback(() => {
     if (reducedMotion) return;
@@ -148,9 +161,19 @@ export const PingletSvg: React.FC<PingletSvgProps> = React.memo(({
     }, 1100);
   }, [reducedMotion]);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     updateTiltFromPoint(e.clientX, e.clientY);
     triggerTapReaction();
+    externalPointerDown?.(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    updateTiltFromPoint(e.clientX, e.clientY);
+    externalPointerMove?.(e);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    externalPointerUp?.(e);
   };
 
   const handleMouseEnter = () => {
@@ -178,28 +201,44 @@ export const PingletSvg: React.FC<PingletSvgProps> = React.memo(({
   const eyePupilX = (tilt.x * 8 + lookOffset);
   const eyePupilY = (tilt.y * 8);
 
+  const reactionTransform = reducedMotion
+    ? ''
+    : touchReaction === 'stop_it'
+    ? 'translate3d(-6px, 0, 0) rotate(-4deg)'
+    : touchReaction === 'sugar_rush'
+    ? 'translate3d(0, -12px, 0) scale(1.08) rotate(3deg)'
+    : touchReaction === 'startled'
+    ? 'translate3d(0, -16px, 0) scale(1.04)'
+    : touchReaction === 'yawn'
+    ? 'translate3d(0, 6px, 0) scale(0.97) rotate(2deg)'
+    : '';
+
   return (
     <div
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       onMouseEnter={handleMouseEnter}
       onPointerLeave={handlePointerLeave}
       className={`relative select-none flex items-center justify-center cursor-pointer ${className}`}
       style={{
         perspective: '900px',
+        touchAction: 'none',
       }}
     >
       <div
         className={`w-full h-full transition-transform duration-200 ease-out ${
           mood === 'glitchy' && !reducedMotion ? 'animate-glitch-jitter' : ''
+        } ${touchReaction === 'stop_it' && !reducedMotion ? 'animate-wiggle' : ''} ${
+          touchReaction === 'sugar_rush' && !reducedMotion ? 'animate-bounce' : ''
         }`}
         style={{
           transform: reducedMotion
             ? 'none'
             : `rotateY(${tilt.x * 9}deg) rotateX(${-tilt.y * 9}deg) translate3d(${parallaxX * 0.4}px, ${parallaxY * 0.4}px, 0) scale(${
-                isSquished ? '1.08, 0.92' : '1, 1'
-              })`,
+                isSquished || touchReaction === 'poked' ? '1.08, 0.92' : '1, 1'
+              }) ${reactionTransform}`,
           transformStyle: 'preserve-3d',
           transition: isSquished ? 'transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1)' : 'transform 260ms ease-out',
         }}

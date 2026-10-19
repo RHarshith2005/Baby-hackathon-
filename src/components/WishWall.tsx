@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 import { PingletSvg } from './PingletSvg';
 import { audioSystem } from '../utils/audioSynth';
+import { trackEvent } from '../store/pingletStore';
 
 interface StickerWish {
   id: string;
@@ -65,6 +66,7 @@ export const WishWall: React.FC<WishWallProps> = React.memo(({ onIncrementHellos
     }
 
     setHelloInput('');
+    trackEvent('pinnedWish');
     if (onIncrementHellos) {
       onIncrementHellos();
     }

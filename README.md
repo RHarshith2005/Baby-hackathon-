@@ -92,6 +92,14 @@ A mobile-first, scroll-driven character portfolio and interactive web experience
 | **Particles** | HTML5 2D Canvas with sub-pixel DPR scaling & delta-time physics |
 | **Testing** | Node.js 22 built-in test runner (`node:test`, `node:assert/strict`) |
 
+### 7. Extras & Advanced Features
+- 📖 **Courier Passport**: Bottom-left badge tracking collected postal stamps. Awards stamps for talking, petting, poking, feeding, switching to night mode, achieving high scores in Catch Packets, pinning wishes, finishing the story, and finding the secret Easter egg. Collecting all 10 unlocks a Master Courier certificate PNG renderer!
+- 🍬 **Pocket-Pet Care & Greeting**: Tummy, Cozy, and Joy care meters that decay on load based on timestamps. Feeding, petting, and playing fills the meters and triggers sparkle auras, returning-visitor greetings, and haptic feedback.
+- 💌 **Hello Card Postcard Creator**: Modal allowing visitors to type a custom hello (up to 70 chars), choose a vintage postal stamp, and render a high-resolution 1080x1350 postcard with PNG download and Web Share support.
+- 🎹 **Lullaby Composer**: Extended Dial-Up Lullaby panel featuring an 8-step by 6-note pentatonic grid composer, tempo slider, and shareable URL hash encoding.
+- 📺 **Dial-Up Boot Screen**: First-visit-only CRT-style 56K connection boot overlay with progress bar and skip button.
+- 🦗 **Night Sounds**: Ambient crickets and wind synthesizer toggle for sleepy/night moods.
+
 ---
 
 ## 🚀 Getting Started

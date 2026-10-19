@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, VolumeX, Sun, Moon } from 'lucide-react';
+import { Volume2, VolumeX, Sun, Moon, Sparkles, Mail } from 'lucide-react';
 import type { PingletMood } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
 
@@ -9,6 +9,9 @@ interface HeaderNavProps {
   isMuted: boolean;
   onToggleMute: () => void;
   onTriggerEasterEgg: () => void;
+  nightSoundsEnabled: boolean;
+  onToggleNightSounds: () => void;
+  onOpenHelloCard: () => void;
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = React.memo(({
@@ -17,6 +20,9 @@ export const HeaderNav: React.FC<HeaderNavProps> = React.memo(({
   isMuted,
   onToggleMute,
   onTriggerEasterEgg,
+  nightSoundsEnabled,
+  onToggleNightSounds,
+  onOpenHelloCard,
 }) => {
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef<number | null>(null);
@@ -58,22 +64,27 @@ export const HeaderNav: React.FC<HeaderNavProps> = React.memo(({
   return (
     <header className="sticky top-0 z-40 bg-[#1B1B3A]/95 border-b-3 border-[#1B1B3A] shadow-lg backdrop-blur-md">
       {/* Retro-Web Touch #1: Marquee Strip */}
-      <div className="bg-[#FFF0B3] text-[#1B1B3A] overflow-hidden whitespace-nowrap py-1 border-b-2 border-[#1B1B3A] text-xs font-mono-retro font-bold">
-        <div className="animate-marquee flex items-center gap-8">
-          <span>• PINGLET · SERIES 01 JELLY RESIN DESIGNER TOY</span>
-          <span>• &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo;</span>
-          <span>• BORN AT 3:00 A.M. IN A DIAL-UP HANDSHAKE</span>
-          <span>• JUNIOR PACKET COURIER OF THE OLD WEB</span>
-          <span>• PINGLET · SERIES 01 JELLY RESIN DESIGNER TOY</span>
-          <span>• &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo;</span>
-          <span>• BORN AT 3:00 A.M. IN A DIAL-UP HANDSHAKE</span>
-          <span>• JUNIOR PACKET COURIER OF THE OLD WEB</span>
+      <div
+        className="bg-[#FFF0B3] text-[#1B1B3A] overflow-hidden whitespace-nowrap py-1 border-b-2 border-[#1B1B3A] text-xs font-mono-retro font-bold select-none"
+        aria-hidden="true"
+      >
+        <div className="inline-block animate-marquee">
+          <span>• PINGLET · SERIES 01 JELLY RESIN DESIGNER TOY </span>
+          <span>• &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo; </span>
+          <span>• BORN AT 3:00 A.M. IN A DIAL-UP HANDSHAKE </span>
+          <span>• JUNIOR PACKET COURIER OF THE OLD WEB </span>
+        </div>
+        <div className="inline-block animate-marquee2 ml-4">
+          <span>• PINGLET · SERIES 01 JELLY RESIN DESIGNER TOY </span>
+          <span>• &ldquo;I CARRY LITTLE HELLOS ACROSS THE WIRES&rdquo; </span>
+          <span>• BORN AT 3:00 A.M. IN A DIAL-UP HANDSHAKE </span>
+          <span>• JUNIOR PACKET COURIER OF THE OLD WEB </span>
         </div>
       </div>
 
       {/* Main Sticky Control Bar (Minimum 48px touch targets) */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
-        {/* Left: Blinking Modem Light (hidden 3-tap egg) + Brand */}
+        {/* Left: Blinking Modem Light + Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
@@ -118,8 +129,35 @@ export const HeaderNav: React.FC<HeaderNavProps> = React.memo(({
           </a>
         </nav>
 
-        {/* Right: Day/Night Mood Toggle + Fixed Visible Mute Toggle */}
+        {/* Right: Hello Card, Night Sounds, Day/Night Toggle & Mute */}
         <div className="flex items-center gap-2">
+          {/* Hello Card Button */}
+          <button
+            type="button"
+            onClick={onOpenHelloCard}
+            className="min-h-[48px] px-3.5 py-2 rounded-full bg-[#FF9EC7] hover:bg-[#ff8cb8] text-[#1B1B3A] font-rounded font-bold text-xs sm:text-sm border-2 border-[#1B1B3A] shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            aria-label="Open Hello Card postcard creator"
+          >
+            <Mail className="w-4 h-4" />
+            <span className="hidden md:inline">Hello Card</span>
+          </button>
+
+          {/* Night Sounds Toggle (shows when night mode) */}
+          {isNightMode && (
+            <button
+              type="button"
+              onClick={onToggleNightSounds}
+              className={`min-h-[48px] px-3 py-2 rounded-full font-rounded font-bold text-xs border-2 border-[#1B1B3A] flex items-center gap-1 cursor-pointer transition-all ${
+                nightSoundsEnabled ? 'bg-[#9FF3D3] text-[#1B1B3A]' : 'bg-[#282854] text-white/80'
+              }`}
+              title="Toggle night crickets and wind ambient sounds"
+              aria-label="Toggle night sounds"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Night Sounds</span>
+            </button>
+          )}
+
           {/* Day = Excited / Night = Sleepy Mood Toggle */}
           <button
             type="button"

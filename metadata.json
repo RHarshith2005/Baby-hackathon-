@@ -1,6 +1,6 @@
 {
   "name": "Pinglet - Junior Packet Courier",
   "description": "A mobile-first, scroll-driven portfolio for Pinglet: a 3D soft-clay baby ghost carrying little hellos across the old web wires.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

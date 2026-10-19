@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { HeaderNav } from './components/HeaderNav';
 import { HeroSection } from './components/HeroSection';
 import { CharacterSheet } from './components/CharacterSheet';
@@ -15,43 +15,92 @@ import { EasterEggModal } from './components/EasterEggModal';
 import { SparkleCursorTrail } from './components/SparkleCursorTrail';
 import { CandyStarField } from './components/CandyStarField';
 import { PlayfulDivider } from './components/PlayfulDivider';
+import { CourierPassportModal } from './components/CourierPassportModal';
+import { PassportFloatingButton } from './components/PassportFloatingButton';
+import { StampToast } from './components/StampToast';
+import { HelloCardModal } from './components/HelloCardModal';
+import { DialUpBootScreen } from './components/DialUpBootScreen';
 import { audioSystem } from './utils/audioSynth';
+import { nightSoundsService } from './utils/nightSounds';
 import { incrementHellos } from './utils/hellosStore';
+import { trackEvent } from './store/pingletStore';
 import type { PingletMood } from './game/packetRules';
 
 export default function App() {
   const [currentMood, setCurrentMood] = useState<PingletMood>('excited');
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isEasterEggOpen, setIsEasterEggOpen] = useState<boolean>(false);
+  const [isPassportOpen, setIsPassportOpen] = useState<boolean>(false);
+  const [isHelloCardOpen, setIsHelloCardOpen] = useState<boolean>(false);
+  const [nightSoundsEnabled, setNightSoundsEnabled] = useState<boolean>(false);
+
+  const isNight = currentMood === 'sleepy' || currentMood === 'glitchy';
+
+  // Sync night sounds state with mood and mute settings
+  useEffect(() => {
+    nightSoundsService.setEnabled(nightSoundsEnabled, isNight, isMuted);
+  }, [nightSoundsEnabled, isNight, isMuted]);
 
   const handleToggleMute = useCallback(() => {
     setIsMuted((prev) => {
       const nextMuted = !prev;
       audioSystem.setMuted(nextMuted);
+      nightSoundsService.setMuted(nextMuted, isNight);
       return nextMuted;
     });
-  }, []);
+  }, [isNight]);
 
   const handleSelectMood = useCallback((mood: PingletMood) => {
     setCurrentMood(mood);
+    if (mood === 'sleepy' || mood === 'glitchy') {
+      trackEvent('switchedNight');
+    }
   }, []);
 
   const handleIncrementHellos = useCallback(() => {
     incrementHellos(1);
+    trackEvent('talked');
   }, []);
 
   const handleTriggerEasterEgg = useCallback(() => {
     setCurrentMood('glitchy');
     incrementHellos(1);
     setIsEasterEggOpen(true);
+    trackEvent('foundEgg');
   }, []);
 
   const handleCloseEasterEgg = useCallback(() => {
     setIsEasterEggOpen(false);
   }, []);
 
+  const handleToggleNightSounds = useCallback(() => {
+    setNightSoundsEnabled((prev) => !prev);
+    audioSystem.playTone(659.25, 0.1, 'sine');
+  }, []);
+
   return (
     <div className="min-h-screen bg-dreamy-sunset text-[#1B1B3A] flex flex-col selection:bg-[#9FF3D3] selection:text-[#1B1B3A] relative">
+      {/* Feature 5: Dial-Up Boot Screen (First visit only) */}
+      <DialUpBootScreen />
+
+      {/* Non-Blocking New Stamp Toast Notification */}
+      <StampToast />
+
+      {/* Floating Courier Passport Button */}
+      <PassportFloatingButton onOpen={() => setIsPassportOpen(true)} />
+
+      {/* Courier Passport Modal */}
+      <CourierPassportModal
+        isOpen={isPassportOpen}
+        onClose={() => setIsPassportOpen(false)}
+      />
+
+      {/* Hello Card Postcard Modal */}
+      <HelloCardModal
+        isOpen={isHelloCardOpen}
+        onClose={() => setIsHelloCardOpen(false)}
+      />
+
       {/* Skip to Content Accessible Link */}
       <a
         href="#main-content"
@@ -66,18 +115,21 @@ export default function App() {
       {/* Fixed 3-Layer Parallax Candy-Star Field */}
       <CandyStarField />
 
-      {/* Sticky Top Header with Marquee Strip, 3-Tap Modem LED, Day/Night Toggle & Mute */}
+      {/* Sticky Top Header with Marquee Strip, 3-Tap Modem LED, Hello Card, Night Sounds, Day/Night Toggle & Mute */}
       <HeaderNav
         currentMood={currentMood}
         onSelectMood={handleSelectMood}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
         onTriggerEasterEgg={handleTriggerEasterEgg}
+        nightSoundsEnabled={nightSoundsEnabled}
+        onToggleNightSounds={handleToggleNightSounds}
+        onOpenHelloCard={() => setIsHelloCardOpen(true)}
       />
 
       {/* Main Scroll-Driven Designer-Toy Showcase */}
       <main id="main-content" className="flex-1 w-full relative z-20">
-        {/* 1. HERO */}
+        {/* 1. HERO + POCKET-PET CARE METERS */}
         <HeroSection
           currentMood={currentMood}
           onSelectMood={handleSelectMood}
@@ -101,7 +153,7 @@ export default function App() {
         {/* Playful Divider 3: Ticket Perforation into Toy Box Work */}
         <PlayfulDivider variant="ticket" fillColor="#B9A7FF" borderColor="#1B1B3A" />
 
-        {/* 4. WORK (Dial-Up Lullaby, Catch the Packets 20s Game, The Wish Wall) */}
+        {/* 4. WORK (Dial-Up Lullaby + Composer, Catch the Packets 20s Game, The Wish Wall) */}
         <WorkSection
           onMoodChange={handleSelectMood}
           onIncrementHellos={handleIncrementHellos}

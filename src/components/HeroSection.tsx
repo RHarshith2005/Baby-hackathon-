@@ -3,7 +3,7 @@ import { PingletSvg } from './PingletSvg';
 import type { PingletMood } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
 import { ArrowDown } from 'lucide-react';
-
+import { PocketPetCareMeters } from './PocketPetCareMeters';
 import { KineticTitle } from './KineticTitle';
 import { motion } from 'motion/react';
 
@@ -64,7 +64,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(({
 
       {/* Center Designer-Toy Showcase */}
       <div className="relative z-10 max-w-6xl mx-auto w-full grid lg:grid-cols-12 gap-6 sm:gap-8 items-center my-4 sm:my-6">
-        {/* Left: Giant Stacked Uppercase Heading + 1 Caption under 15 words */}
+        {/* Left: Giant Stacked Uppercase Heading + Caption + PocketPet Care Meters */}
         <motion.div
           initial={{ opacity: 0, x: -25 }}
           whileInView={{ opacity: 1, x: 0 }}
@@ -90,7 +90,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(({
 
           {/* 48px Accessible Mood Switcher Buttons */}
           <div
-            className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-2"
+            className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-1"
             role="group"
             aria-label="Choose Pinglet pose"
           >
@@ -111,6 +111,11 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(({
                 {m}
               </button>
             ))}
+          </div>
+
+          {/* Feature 2: Pocket-Pet Care Meters */}
+          <div className="pt-2">
+            <PocketPetCareMeters />
           </div>
         </motion.div>
 

@@ -26,7 +26,25 @@ test('getMidiFrequency calculates 440Hz for A4 (offset 0) and 880Hz for +12', ()
 
 test('audioSystem exposes playGiggle and respects mute state without throwing', () => {
   assert.equal(typeof audioSystem.playGiggle, 'function');
+  assert.equal(typeof audioSystem.playBoop, 'function');
+  assert.equal(typeof audioSystem.playLaugh, 'function');
+  assert.equal(typeof audioSystem.playPurr, 'function');
+  assert.equal(typeof audioSystem.playMunch, 'function');
+  assert.equal(typeof audioSystem.playWakeHop, 'function');
+  assert.equal(typeof audioSystem.playYawn, 'function');
+  assert.equal(typeof audioSystem.speakChirps, 'function');
+
   audioSystem.setMuted(true);
-  assert.doesNotThrow(() => audioSystem.playGiggle());
+  assert.doesNotThrow(() => {
+    audioSystem.playGiggle();
+    audioSystem.playBoop();
+    audioSystem.playLaugh();
+    audioSystem.playPurr();
+    audioSystem.playMunch();
+    audioSystem.playWakeHop();
+    audioSystem.playYawn();
+    audioSystem.speakChirps('hello');
+  });
   audioSystem.setMuted(false);
 });
+

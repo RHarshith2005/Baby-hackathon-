@@ -8,6 +8,7 @@ import {
   createPacketData,
 } from '../game/packetRules';
 import { audioSystem } from '../utils/audioSynth';
+import { trackEvent } from '../store/pingletStore';
 import { PingletSvg } from './PingletSvg';
 import { Play, RotateCcw, Sparkles } from 'lucide-react';
 
@@ -134,6 +135,7 @@ const CatchThePacketsComponent: React.FC<CatchThePacketsProps> = ({
         setIsGameOver(true);
         setIsPlaying(false);
         const finalScore = scoreRef.current;
+        trackEvent('playedRound', { score: finalScore });
         setMood(finalScore > 0 ? 'excited' : 'sleepy');
         // Restore global mood
         if (onMoodChange && previousMoodRef.current) {
